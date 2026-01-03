@@ -20,7 +20,7 @@ export default function Home() {
         <div className="button-group">
           <button onClick={() => navigate("/issuer-login")}>I am an Issuer</button>
           <button onClick={() => navigate("/verify-certificate")}>I am a Verifier</button>
-          <button>I am a Student</button>
+          <button onClick={() => navigate("/student-page")}>I am a Student</button>
         </div>
       </main>
 

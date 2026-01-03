@@ -6,10 +6,10 @@ contract CertificateRegistry {
     //                      STATE VARIABLES
     // =========================================================
 
-    // Approved issuers (registered with institute details)
+    // Approved issuers
     mapping(address => bool) public approvedIssuers;
 
-    // Map issuer address -> Institute details
+    // Institute details
     struct Institute {
         string name;
         string instituteId;
@@ -38,8 +38,11 @@ contract CertificateRegistry {
     // certificateId => Certificate
     mapping(bytes32 => Certificate) private certificates;
 
-    // Track all certificate IDs issued by each issuer
+    // issuer => certificateIds
     mapping(address => bytes32[]) private issuerCertificates;
+
+    // student => certificateIds   ✅ OPTION 1
+    mapping(address => bytes32[]) private studentCertificates;
 
     // =========================================================
     //                           EVENTS
@@ -75,7 +78,7 @@ contract CertificateRegistry {
     // =========================================================
 
     modifier onlyIssuer() {
-        require(approvedIssuers[msg.sender], "You are not a registered issuer");
+        require(approvedIssuers[msg.sender], "Not a registered issuer");
         _;
     }
 
@@ -116,20 +119,24 @@ contract CertificateRegistry {
         require(studentAddress != address(0), "Invalid student address");
         require(certificates[certificateId].issuedAt == 0, "Already issued");
 
-        Certificate storage cert = certificates[certificateId];
-        cert.fileHash = fileHash;
-        cert.student = studentAddress;
-        cert.issuer = msg.sender;
-        cert.issuedAt = block.timestamp;
-        cert.revoked = false;
-        cert.revokedAt = 0;
-        cert.instituteName = institutes[msg.sender].name;
-        cert.instituteId = institutes[msg.sender].instituteId;
-        cert.studentName = studentName;
-        cert.courseName = courseName;
+        Institute memory inst = institutes[msg.sender];
+        require(inst.exists, "Institute not registered");
 
-        // ✅ Record this certificate ID for the issuer
+        certificates[certificateId] = Certificate({
+            fileHash: fileHash,
+            student: studentAddress,
+            issuer: msg.sender,
+            issuedAt: block.timestamp,
+            revoked: false,
+            revokedAt: 0,
+            instituteName: inst.name,
+            instituteId: inst.instituteId,
+            studentName: studentName,
+            courseName: courseName
+        });
+
         issuerCertificates[msg.sender].push(certificateId);
+        studentCertificates[studentAddress].push(certificateId); // ✅ Option 1
 
         emit CertificateIssued(
             certificateId,
@@ -141,7 +148,7 @@ contract CertificateRegistry {
     }
 
     // =========================================================
-    //                   GET CERTIFICATE DETAILS
+    //                 GET CERTIFICATE DETAILS
     // =========================================================
 
     function getCertificate(
@@ -180,7 +187,24 @@ contract CertificateRegistry {
     }
 
     // =========================================================
-    //                  GET CERTIFICATES BY ISSUER
+    //             GET CERTIFICATES BY STUDENT (PHASE 2)
+    // =========================================================
+
+    function getCertificatesByStudent(
+        address student
+    ) external view returns (bytes32[] memory ids, Certificate[] memory certs) {
+        bytes32[] memory certIds = studentCertificates[student];
+        Certificate[] memory result = new Certificate[](certIds.length);
+
+        for (uint256 i = 0; i < certIds.length; i++) {
+            result[i] = certificates[certIds[i]];
+        }
+
+        return (certIds, result);
+    }
+
+    // =========================================================
+    //              GET CERTIFICATES BY ISSUER
     // =========================================================
 
     function getCertificatesByIssuer(
@@ -203,7 +227,7 @@ contract CertificateRegistry {
     function revokeCertificate(bytes32 certificateId) external onlyIssuer {
         Certificate storage cert = certificates[certificateId];
         require(cert.issuedAt != 0, "Certificate not found");
-        require(cert.issuer == msg.sender, "Only original issuer can revoke");
+        require(cert.issuer == msg.sender, "Not original issuer");
         require(!cert.revoked, "Already revoked");
 
         cert.revoked = true;
@@ -219,27 +243,23 @@ contract CertificateRegistry {
     function verifyCertificate(
         bytes32 certificateId,
         bytes32 fileHashToCheck
-    ) external view returns (bool isValid) {
+    ) external view returns (bool) {
         Certificate memory cert = certificates[certificateId];
         if (cert.issuedAt == 0 || cert.revoked) return false;
         return cert.fileHash == fileHashToCheck;
     }
 
     // =========================================================
-    //                     VERIFIER REGISTRATION
+    //                   VERIFIER REGISTRATION
     // =========================================================
 
     function registerVerifier(address verifierAddress) external onlyIssuer {
-        require(verifierAddress != address(0), "Invalid verifier address");
-        require(!approvedVerifiers[verifierAddress], "Already a verifier");
+        require(verifierAddress != address(0), "Invalid address");
+        require(!approvedVerifiers[verifierAddress], "Already verifier");
 
         approvedVerifiers[verifierAddress] = true;
         emit VerifierRegistered(verifierAddress, msg.sender);
     }
-
-    // =========================================================
-    //                         CHECK VERIFIER
-    // =========================================================
 
     function isVerifier(address addr) external view returns (bool) {
         return approvedVerifiers[addr];
