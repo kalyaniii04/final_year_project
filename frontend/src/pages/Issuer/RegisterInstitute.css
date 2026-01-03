@@ -1,0 +1,102 @@
+/* --- Professional Full-Page Form Layout --- */
+body {
+    margin: 0;
+    font-family: "Inter", "Poppins", sans-serif;
+    background-color: #f9fafb;
+    color: #1e293b;
+    line-height: 1.6;
+}
+
+/* Container layout */
+.register-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+/* Heading */
+.register-container h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 1rem;
+}
+
+/* Input fields */
+.register-container input {
+    width: 340px;
+    max-width: 90%;
+    padding: 0.9rem 1rem;
+    margin: 0.6rem 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: #ffffff;
+    font-size: 1rem;
+    color: #0f172a;
+    transition: all 0.25s ease;
+}
+
+.register-container input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Submit button */
+.register-container button {
+    margin-top: 1.5rem;
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.9rem 1.8rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.25s ease, transform 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.register-container button:hover {
+    background-color: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+/* Transaction message */
+.register-container p {
+    margin-top: 1.5rem;
+    font-size: 1rem;
+    color: #334155;
+}
+
+.register-container code {
+    background-color: #e2e8f0;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+    .register-container {
+        padding: 2rem 1rem;
+    }
+
+    .register-container h1 {
+        font-size: 1.8rem;
+    }
+
+    .register-container input {
+        width: 100%;
+    }
+
+    .register-container button {
+        width: 100%;
+        justify-content: center;
+    }
+}
