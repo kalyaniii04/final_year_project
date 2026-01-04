@@ -187,12 +187,14 @@ const IssueCertificate = () => {
       console.log("📡 Calling contract.issueCertificate...");
 
       const tx = await contract.issueCertificate(
-        certIdBytes,
-        studentAddress,
-        fileHashBytes,
-        studentName,
-        course
-      );
+  certIdBytes,
+  studentAddress,
+  fileHashBytes,
+  ipfsHash,           // ✅ PASS IT
+  studentName,
+  course
+);
+
 
       console.log("⏳ Waiting for transaction confirmation...");
       await tx.wait();

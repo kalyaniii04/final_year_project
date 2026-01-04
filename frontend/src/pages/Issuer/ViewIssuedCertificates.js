@@ -30,50 +30,61 @@ export default function ViewIssuedCertificates() {
 
   // -------------------- Fetch Certificates --------------------
   const fetchCertificates = async () => {
-    try {
-      setLoading(true);
-      setErrorMsg("");
+  try {
+    setLoading(true);
+    setErrorMsg("");
 
-      const { contract, signer } = await connectWallet();
-      const address = await signer.getAddress();
-      setIssuerAddress(address);
+    const { contract, signer } = await connectWallet();
+    const address = await signer.getAddress();
+    setIssuerAddress(address);
 
-      // ✅ Fetch both certificate IDs and certificate structs
-      const [ids, certs] = await contract.getCertificatesByIssuer(address);
+    // ✅ STEP 1: get IDs ONLY
+    const ids = await contract.getCertificateIdsByIssuer(address);
 
-      console.log("Fetched certificate IDs:", ids);
-      console.log("Fetched certificate structs:", certs);
+    console.log("Fetched certificate IDs:", ids);
 
-      // ✅ Parse certificates correctly
-      const parsedCerts = certs.map((cert, i) => ({
-        id: ids[i],
-        student: cert.student,
-        issuer: cert.issuer,
-        issuedAt: cert.issuedAt
-          ? new Date(Number(cert.issuedAt) * 1000).toLocaleString()
-          : "N/A",
-        revoked: cert.revoked,
-        revokedAt: cert.revokedAt
-          ? new Date(Number(cert.revokedAt) * 1000).toLocaleString()
-          : "N/A",
-        instituteName: cert.instituteName,
-        instituteId: cert.instituteId,
-        studentName: cert.studentName,
-        courseName: cert.courseName,
-      }));
-
-      setCertificates(parsedCerts);
-    } catch (error) {
-      console.error("❌ Error fetching certificates:", error);
-      setErrorMsg(
-        error.reason ||
-          error.message ||
-          "Failed to load certificates. Please check the console for details."
-      );
-    } finally {
-      setLoading(false);
+    // Safety guard
+    if (!Array.isArray(ids) || ids.length === 0) {
+      setCertificates([]);
+      return;
     }
-  };
+
+    // ✅ STEP 2: fetch certificates one-by-one
+    const certs = await Promise.all(
+      ids.map(async (id) => {
+        const cert = await contract.getCertificate(id);
+        return {
+          id,
+          student: cert.student,
+          issuer: cert.issuer,
+          issuedAt: cert.issuedAt
+            ? new Date(Number(cert.issuedAt) * 1000).toLocaleString()
+            : "N/A",
+          revoked: cert.revoked,
+          revokedAt: cert.revokedAt
+            ? new Date(Number(cert.revokedAt) * 1000).toLocaleString()
+            : "N/A",
+          instituteName: cert.instituteName,
+          instituteId: cert.instituteId,
+          studentName: cert.studentName,
+          courseName: cert.courseName,
+        };
+      })
+    );
+
+    setCertificates(certs);
+  } catch (error) {
+    console.error("❌ Error fetching certificates:", error);
+    setErrorMsg(
+      error.reason ||
+        error.message ||
+        "Failed to load certificates. Please check the console for details."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // -------------------- On Mount --------------------
   useEffect(() => {

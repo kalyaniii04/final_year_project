@@ -1,106 +1,99 @@
 import { useState } from "react";
 import { ethers } from "ethers";
-import CONTRACT_ABI from "../CertificateRegistry.json"
+import CertificateRegistry from "../CertificateRegistry.json";
 
-// 🔴 UPDATE THESE
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+const IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
 
 export default function Student() {
-  const [walletAddress, setWalletAddress] = useState(null);
-  const [certificates, setCertificates] = useState([]);
+  const [wallet, setWallet] = useState("");
+  const [certs, setCerts] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ===============================
-  // Phase 2: Fetch Certificates
-  // ===============================
-  const fetchCertificates = async (studentAddress) => {
-    try {
-      setLoading(true);
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        CONTRACT_ABI,
-        provider
-      );
-
-      const [ids, certs] =
-        await contract.getCertificatesByStudent(studentAddress);
-
-      const formatted = certs.map((c, index) => ({
-        certificateId: ids[index],
-        courseName: c.courseName,
-        instituteName: c.instituteName,
-        issuer: c.issuer,
-        issuedAt: new Date(
-          Number(c.issuedAt) * 1000
-        ).toLocaleDateString(),
-        revoked: c.revoked
-      }));
-
-      setCertificates(formatted);
-    } catch (err) {
-      console.error("Failed to fetch certificates:", err);
-    } finally {
-      setLoading(false);
-    }
+  const connectWallet = async () => {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const address = await signer.getAddress();
+    setWallet(address);
+    fetchCertificates(address);
   };
 
-  // ===============================
-  // Phase 1: Connect Wallet
-  // ===============================
-  const connectWallet = async () => {
-    try {
-      if (!window.ethereum) {
-        alert("MetaMask not detected");
-        return;
-      }
+  const fetchCertificates = async (student) => {
+    setLoading(true);
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESS,
+      CertificateRegistry.abi,
+      signer
+    );
 
-      setWalletAddress(accounts[0]);
+    const ids = await contract.getCertificateIdsByStudent(student);
 
-      // ✅ CALL PHASE 2
-      fetchCertificates(accounts[0]);
+    const data = await Promise.all(
+      ids.map(async (id) => {
+        const c = await contract.getCertificate(id);
+        return {
+          id,
+          studentName: c.studentName,
+          courseName: c.courseName,
+          instituteName: c.instituteName,
+          issuedAt: new Date(Number(c.issuedAt) * 1000).toLocaleDateString(),
+          revoked: c.revoked,
+          ipfsHash: c.ipfsHash, // ✅ FROM CONTRACT
+        };
+      })
+    );
 
-    } catch (error) {
-      console.error("Wallet connection failed:", error);
-    }
+    setCerts(data);
+    setLoading(false);
+  };
+
+  const downloadPDF = (ipfsHash) => {
+    const cid = ipfsHash.replace("ipfs://", "");
+    window.open(IPFS_GATEWAY + cid, "_blank");
   };
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Student Dashboard</h2>
+      <h2>🎓 Student Certificates</h2>
 
-      {!walletAddress ? (
+      {!wallet ? (
         <button onClick={connectWallet}>Connect Wallet</button>
+      ) : loading ? (
+        <p>Loading...</p>
       ) : (
-        <>
-          <p><strong>Wallet:</strong> {walletAddress}</p>
-
-          <h3>Your Certificates</h3>
-
-          {loading ? (
-            <p>Loading certificates...</p>
-          ) : certificates.length === 0 ? (
-            <p>No certificates found.</p>
-          ) : (
-            <ul>
-              {certificates.map((cert, index) => (
-                <li key={index} style={{ marginBottom: 12 }}>
-                  <p><strong>Course:</strong> {cert.courseName}</p>
-                  <p><strong>Institute:</strong> {cert.instituteName}</p>
-                  <p><strong>Issued:</strong> {cert.issuedAt}</p>
-                  <p>
-                    <strong>Status:</strong>{" "}
-                    {cert.revoked ? "Revoked" : "Valid"}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+        <table border="1" cellPadding="10">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Student</th>
+              <th>Course</th>
+              <th>Institute</th>
+              <th>Issued</th>
+              <th>Status</th>
+              <th>PDF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {certs.map((c, i) => (
+              <tr key={i}>
+                <td>{c.id.slice(0, 8)}...</td>
+                <td>{c.studentName}</td>
+                <td>{c.courseName}</td>
+                <td>{c.instituteName}</td>
+                <td>{c.issuedAt}</td>
+                <td>{c.revoked ? "❌ Revoked" : "✅ Valid"}</td>
+                <td>
+                  <button onClick={() => downloadPDF(c.ipfsHash)}>
+                    ⬇ Download
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

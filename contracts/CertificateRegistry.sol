@@ -9,6 +9,9 @@ contract CertificateRegistry {
     // Approved issuers
     mapping(address => bool) public approvedIssuers;
 
+    // Institute ID uniqueness
+    mapping(string => bool) private instituteIdUsed;
+
     // Institute details
     struct Institute {
         string name;
@@ -24,6 +27,7 @@ contract CertificateRegistry {
     // Certificate structure
     struct Certificate {
         bytes32 fileHash;
+        string ipfsHash; // ✅ ADD THIS
         address student;
         address issuer;
         uint256 issuedAt;
@@ -41,7 +45,7 @@ contract CertificateRegistry {
     // issuer => certificateIds
     mapping(address => bytes32[]) private issuerCertificates;
 
-    // student => certificateIds   ✅ OPTION 1
+    // student => certificateIds
     mapping(address => bytes32[]) private studentCertificates;
 
     // =========================================================
@@ -53,7 +57,6 @@ contract CertificateRegistry {
         string name,
         string instituteId
     );
-
     event CertificateIssued(
         bytes32 indexed certificateId,
         address indexed student,
@@ -61,13 +64,11 @@ contract CertificateRegistry {
         bytes32 fileHash,
         uint256 issuedAt
     );
-
     event CertificateRevoked(
         bytes32 indexed certificateId,
         address indexed issuer,
         uint256 revokedAt
     );
-
     event VerifierRegistered(
         address indexed verifierAddress,
         address indexed registeredBy
@@ -82,18 +83,31 @@ contract CertificateRegistry {
         _;
     }
 
+    modifier onlyVerifierOrIssuer() {
+        require(
+            approvedVerifiers[msg.sender] || approvedIssuers[msg.sender],
+            "Not authorized"
+        );
+        _;
+    }
+
     // =========================================================
     //                 ISSUER & INSTITUTE REGISTRATION
     // =========================================================
 
     function registerIssuer(
-        string memory name,
-        string memory instituteId,
-        string memory location
+        string calldata name,
+        string calldata instituteId,
+        string calldata location
     ) external {
         require(!approvedIssuers[msg.sender], "Issuer already registered");
+        require(bytes(name).length > 0, "Institute name required");
+        require(bytes(instituteId).length > 0, "Institute ID required");
+        require(!instituteIdUsed[instituteId], "Institute ID already used");
 
         approvedIssuers[msg.sender] = true;
+        instituteIdUsed[instituteId] = true;
+
         institutes[msg.sender] = Institute({
             name: name,
             instituteId: instituteId,
@@ -112,18 +126,23 @@ contract CertificateRegistry {
         bytes32 certificateId,
         address studentAddress,
         bytes32 fileHash,
-        string memory studentName,
-        string memory courseName
+        string calldata ipfsHash, // ✅ ADD
+        string calldata studentName,
+        string calldata courseName
     ) external onlyIssuer {
         require(certificateId != bytes32(0), "Invalid certificateId");
         require(studentAddress != address(0), "Invalid student address");
         require(certificates[certificateId].issuedAt == 0, "Already issued");
+        require(fileHash != bytes32(0), "Invalid file hash");
+        require(bytes(studentName).length > 0, "Student name required");
+        require(bytes(courseName).length > 0, "Course name required");
 
         Institute memory inst = institutes[msg.sender];
         require(inst.exists, "Institute not registered");
 
         certificates[certificateId] = Certificate({
             fileHash: fileHash,
+            ipfsHash: ipfsHash,
             student: studentAddress,
             issuer: msg.sender,
             issuedAt: block.timestamp,
@@ -136,7 +155,7 @@ contract CertificateRegistry {
         });
 
         issuerCertificates[msg.sender].push(certificateId);
-        studentCertificates[studentAddress].push(certificateId); // ✅ Option 1
+        studentCertificates[studentAddress].push(certificateId);
 
         emit CertificateIssued(
             certificateId,
@@ -153,71 +172,26 @@ contract CertificateRegistry {
 
     function getCertificate(
         bytes32 certificateId
-    )
-        external
-        view
-        returns (
-            bytes32 fileHash,
-            address student,
-            address issuer,
-            uint256 issuedAt,
-            bool revoked,
-            uint256 revokedAt,
-            string memory instituteName,
-            string memory instituteId,
-            string memory studentName,
-            string memory courseName
-        )
-    {
+    ) external view returns (Certificate memory) {
         Certificate memory cert = certificates[certificateId];
         require(cert.issuedAt != 0, "Certificate not found");
-
-        return (
-            cert.fileHash,
-            cert.student,
-            cert.issuer,
-            cert.issuedAt,
-            cert.revoked,
-            cert.revokedAt,
-            cert.instituteName,
-            cert.instituteId,
-            cert.studentName,
-            cert.courseName
-        );
+        return cert;
     }
 
     // =========================================================
-    //             GET CERTIFICATES BY STUDENT (PHASE 2)
+    //             GET CERTIFICATE IDS (GAS SAFE)
     // =========================================================
 
-    function getCertificatesByStudent(
+    function getCertificateIdsByStudent(
         address student
-    ) external view returns (bytes32[] memory ids, Certificate[] memory certs) {
-        bytes32[] memory certIds = studentCertificates[student];
-        Certificate[] memory result = new Certificate[](certIds.length);
-
-        for (uint256 i = 0; i < certIds.length; i++) {
-            result[i] = certificates[certIds[i]];
-        }
-
-        return (certIds, result);
+    ) external view returns (bytes32[] memory) {
+        return studentCertificates[student];
     }
 
-    // =========================================================
-    //              GET CERTIFICATES BY ISSUER
-    // =========================================================
-
-    function getCertificatesByIssuer(
+    function getCertificateIdsByIssuer(
         address issuer
-    ) external view returns (bytes32[] memory ids, Certificate[] memory certs) {
-        bytes32[] memory certIds = issuerCertificates[issuer];
-        Certificate[] memory result = new Certificate[](certIds.length);
-
-        for (uint256 i = 0; i < certIds.length; i++) {
-            result[i] = certificates[certIds[i]];
-        }
-
-        return (certIds, result);
+    ) external view returns (bytes32[] memory) {
+        return issuerCertificates[issuer];
     }
 
     // =========================================================
@@ -243,7 +217,7 @@ contract CertificateRegistry {
     function verifyCertificate(
         bytes32 certificateId,
         bytes32 fileHashToCheck
-    ) external view returns (bool) {
+    ) external view onlyVerifierOrIssuer returns (bool) {
         Certificate memory cert = certificates[certificateId];
         if (cert.issuedAt == 0 || cert.revoked) return false;
         return cert.fileHash == fileHashToCheck;
