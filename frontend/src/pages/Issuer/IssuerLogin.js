@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { connectWallet } from "../../utils/connectWallet";
 
 const IssuerLogin = () => {
@@ -7,91 +8,130 @@ const IssuerLogin = () => {
   const [email, setEmail] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  // ==============================
-  // 🔗 Handle MetaMask connection
-  // ==============================
+  // ==================================
+  // 🔗 Wallet login + signature (Stage 2)
+  // ==================================
   const handleWalletConnect = async () => {
     try {
       setLoading(true);
 
-      // ✅ connectWallet now returns an object
+      // 1️⃣ Connect wallet
       const { signer } = await connectWallet();
-
-      // ✅ Extract address safely
       const address = await signer.getAddress();
 
+      // 2️⃣ Sign message
+      const message = "Login as Certificate Issuer";
+      const signature = await signer.signMessage(message);
+
+      // 3️⃣ Send to backend
+      const res = await axios.post("http://localhost:5000/auth/login", {
+        walletAddress: address,
+        signature,
+      });
+
+      console.log("Wallet verified:", res.data);
+
       setWalletAddress(address);
+      alert("Wallet verified. Please enter email to receive OTP.");
+
     } catch (error) {
-      console.error("❌ Wallet connection failed:", error);
-      alert("Wallet connection failed. Check console.");
+      console.error("❌ Wallet authentication failed:", error);
+      alert("Wallet authentication failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // ==============================
-  // 📧 Simulate OTP sending
-  // ==============================
-  const sendOtp = () => {
-    if (!email) {
-      alert("Please enter your email ID first.");
-      return;
+  // ==================================
+  // 📧 Request OTP from backend
+  // ==================================
+  const sendOtp = async () => {
+    try {
+      if (!email) {
+        alert("Please enter email");
+        return;
+      }
+
+      setLoading(true);
+
+      await axios.post("http://localhost:5000/auth/send-otp", {
+        walletAddress,
+        email,
+      });
+
+      setOtpSent(true);
+      alert("OTP sent to your email");
+
+    } catch (error) {
+      console.error("❌ OTP send failed:", error);
+      alert("Failed to send OTP");
+    } finally {
+      setLoading(false);
     }
-
-    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(randomOtp);
-    setOtpSent(true);
-
-    // ⚠️ Simulation only
-    alert("OTP sent to your email (simulated): " + randomOtp);
   };
 
-  // ==============================
-  // ✅ Verify OTP
-  // ==============================
-  const verifyOtp = () => {
-    if (otp === generatedOtp) {
-      alert("✅ OTP Verified Successfully!");
+  // ==================================
+  // ✅ Verify OTP (Stage 3)
+  // ==================================
+  const verifyOtp = async () => {
+    try {
+      setLoading(true);
+
+      const res = await axios.post(
+        "http://localhost:5000/auth/verify-otp",
+        {
+          walletAddress,
+          otp,
+        }
+      );
+
+      const { token } = res.data;
+
+      // Save MFA token
+      localStorage.setItem("issuerToken", token);
+
+      alert("✅ MFA verified successfully");
       navigate("/issuer-dashboard");
-    } else {
-      alert("❌ Invalid OTP. Please try again.");
+
+    } catch (error) {
+      console.error("❌ OTP verification failed:", error);
+      alert("Invalid or expired OTP");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ==============================
+  // ==================================
   // 🧱 UI
-  // ==============================
+  // ==================================
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>Issuer Login & MFA Verification</h1>
+      <h1>Issuer Login (MFA)</h1>
 
-      {/* MetaMask Connection */}
+      {/* Wallet Section */}
       {!walletAddress ? (
         <button onClick={handleWalletConnect} disabled={loading}>
-          {loading ? "Connecting..." : "Connect MetaMask"}
+          {loading ? "Connecting..." : "Login with MetaMask"}
         </button>
       ) : (
         <p>
-          ✅ Connected Wallet:{" "}
+          ✅ Wallet Connected:{" "}
           <strong>
             {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
           </strong>
         </p>
       )}
 
-      {/* Email + OTP Section */}
+      {/* Email + OTP */}
       {walletAddress && (
         <div style={{ marginTop: "20px" }}>
-          <p>Enter your Email ID:</p>
-
           <input
             type="email"
-            placeholder="Enter Email ID"
+            placeholder="Enter registered email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -99,12 +139,12 @@ const IssuerLogin = () => {
           <br />
           <br />
 
-          <button onClick={sendOtp}>Send OTP</button>
+          <button onClick={sendOtp} disabled={loading}>
+            Send OTP
+          </button>
 
           {otpSent && (
             <div style={{ marginTop: "15px" }}>
-              <p>Enter OTP:</p>
-
               <input
                 type="text"
                 placeholder="Enter OTP"
@@ -115,7 +155,9 @@ const IssuerLogin = () => {
               <br />
               <br />
 
-              <button onClick={verifyOtp}>Verify OTP</button>
+              <button onClick={verifyOtp} disabled={loading}>
+                Verify OTP
+              </button>
             </div>
           )}
         </div>
