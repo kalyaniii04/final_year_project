@@ -3,6 +3,7 @@ const { ethers } = require("ethers");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const nonceStore = require("../utils/nonceStore");
 
 const otpStore = require("../utils/otpStore");
 
@@ -19,6 +20,27 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+router.post("/request-nonce", (req, res) => {
+  const { walletAddress } = req.body;
+
+  if (!walletAddress || !ethers.isAddress(walletAddress)) {
+    return res.status(400).json({ error: "Invalid wallet address" });
+  }
+
+  const nonce = Math.floor(100000 + Math.random() * 900000).toString();
+
+  nonceStore[walletAddress] = {
+    nonce,
+    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+  };
+
+  res.json({
+    message: "Nonce generated",
+    nonce,
+  });
+});
+
+
 /* ================================
    1️⃣ WALLET LOGIN (Stage 2)
 ================================ */
@@ -30,12 +52,26 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Missing walletAddress or signature" });
     }
 
-    const message = "Login as Certificate Issuer";
+    const record = nonceStore[walletAddress];
+
+    if (!record) {
+      return res.status(401).json({ error: "Nonce not found" });
+    }
+
+    if (Date.now() > record.expiresAt) {
+      delete nonceStore[walletAddress];
+      return res.status(401).json({ error: "Nonce expired" });
+    }
+
+    const message = `Login nonce: ${record.nonce}`;
     const recovered = ethers.verifyMessage(message, signature);
 
     if (recovered.toLowerCase() !== walletAddress.toLowerCase()) {
       return res.status(401).json({ error: "Invalid wallet signature" });
     }
+
+    // 🔥 IMPORTANT: invalidate nonce
+    delete nonceStore[walletAddress];
 
     res.json({
       message: "Wallet verified",
@@ -46,6 +82,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ error: "Wallet verification failed" });
   }
 });
+
 
 /* ================================
    2️⃣ SEND OTP

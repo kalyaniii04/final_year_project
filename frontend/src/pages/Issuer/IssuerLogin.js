@@ -13,7 +13,7 @@ const IssuerLogin = () => {
   const navigate = useNavigate();
 
   // ==================================
-  // 🔗 Wallet login + signature (Stage 2)
+  // 🔗 Wallet Login (Nonce-based, Secure)
   // ==================================
   const handleWalletConnect = async () => {
     try {
@@ -23,31 +23,39 @@ const IssuerLogin = () => {
       const { signer } = await connectWallet();
       const address = await signer.getAddress();
 
-      // 2️⃣ Sign message
-      const message = "Login as Certificate Issuer";
+      // 2️⃣ Request nonce from backend
+      const nonceRes = await axios.post(
+        "http://localhost:5000/auth/request-nonce",
+        { walletAddress: address }
+      );
+
+      const nonce = nonceRes.data.nonce;
+
+      // 3️⃣ Sign nonce
+      const message = `Login nonce: ${nonce}`;
       const signature = await signer.signMessage(message);
 
-      // 3️⃣ Send to backend
-      const res = await axios.post("http://localhost:5000/auth/login", {
+      // 4️⃣ Verify signature
+      await axios.post("http://localhost:5000/auth/login", {
         walletAddress: address,
         signature,
       });
 
-      console.log("Wallet verified:", res.data);
-
       setWalletAddress(address);
-      alert("Wallet verified. Please enter email to receive OTP.");
+      alert("✅ Wallet verified. Enter email to receive OTP.");
 
     } catch (error) {
       console.error("❌ Wallet authentication failed:", error);
-      alert("Wallet authentication failed");
+      alert(
+        error?.response?.data?.error || "Wallet authentication failed"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   // ==================================
-  // 📧 Request OTP from backend
+  // 📧 Send OTP
   // ==================================
   const sendOtp = async () => {
     try {
@@ -64,21 +72,26 @@ const IssuerLogin = () => {
       });
 
       setOtpSent(true);
-      alert("OTP sent to your email");
+      alert("📧 OTP sent to your email");
 
     } catch (error) {
       console.error("❌ OTP send failed:", error);
-      alert("Failed to send OTP");
+      alert(error?.response?.data?.error || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
   };
 
   // ==================================
-  // ✅ Verify OTP (Stage 3)
+  // ✅ Verify OTP
   // ==================================
   const verifyOtp = async () => {
     try {
+      if (!otp) {
+        alert("Please enter OTP");
+        return;
+      }
+
       setLoading(true);
 
       const res = await axios.post(
@@ -91,7 +104,7 @@ const IssuerLogin = () => {
 
       const { token } = res.data;
 
-      // Save MFA token
+      // Save JWT
       localStorage.setItem("issuerToken", token);
 
       alert("✅ MFA verified successfully");
@@ -99,7 +112,7 @@ const IssuerLogin = () => {
 
     } catch (error) {
       console.error("❌ OTP verification failed:", error);
-      alert("Invalid or expired OTP");
+      alert(error?.response?.data?.error || "Invalid or expired OTP");
     } finally {
       setLoading(false);
     }
@@ -140,7 +153,7 @@ const IssuerLogin = () => {
           <br />
 
           <button onClick={sendOtp} disabled={loading}>
-            Send OTP
+            {loading ? "Sending..." : "Send OTP"}
           </button>
 
           {otpSent && (
@@ -156,7 +169,7 @@ const IssuerLogin = () => {
               <br />
 
               <button onClick={verifyOtp} disabled={loading}>
-                Verify OTP
+                {loading ? "Verifying..." : "Verify OTP"}
               </button>
             </div>
           )}

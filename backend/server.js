@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 
 const authRoutes = require("./routes/auth");
+const certificateRoutes = require("./routes/certificateRoutes");
 
 const app = express();
 
@@ -12,6 +13,9 @@ app.use(express.json());
 
 // Routes
 app.use("/auth", authRoutes);
+
+// 📜 Certificate routes
+app.use("/certificates", certificateRoutes);
 
 // Health check
 app.get("/", (req, res) => {
