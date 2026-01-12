@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ Axios instance with env baseURL
 import { connectWallet } from "../../utils/connectWallet";
 
 const IssuerLogin = () => {
@@ -13,7 +13,7 @@ const IssuerLogin = () => {
   const navigate = useNavigate();
 
   // ==================================
-  // 🔗 Wallet Login (Nonce-based, Secure)
+  // 🔗 Wallet Login (Nonce-based)
   // ==================================
   const handleWalletConnect = async () => {
     try {
@@ -23,11 +23,10 @@ const IssuerLogin = () => {
       const { signer } = await connectWallet();
       const address = await signer.getAddress();
 
-      // 2️⃣ Request nonce from backend
-      const nonceRes = await axios.post(
-        "http://localhost:5000/auth/request-nonce",
-        { walletAddress: address }
-      );
+      // 2️⃣ Request nonce
+      const nonceRes = await api.post("/auth/request-nonce", {
+        walletAddress: address,
+      });
 
       const nonce = nonceRes.data.nonce;
 
@@ -36,7 +35,7 @@ const IssuerLogin = () => {
       const signature = await signer.signMessage(message);
 
       // 4️⃣ Verify signature
-      await axios.post("http://localhost:5000/auth/login", {
+      await api.post("/auth/login", {
         walletAddress: address,
         signature,
       });
@@ -66,7 +65,7 @@ const IssuerLogin = () => {
 
       setLoading(true);
 
-      await axios.post("http://localhost:5000/auth/send-otp", {
+      await api.post("/auth/send-otp", {
         walletAddress,
         email,
       });
@@ -94,13 +93,10 @@ const IssuerLogin = () => {
 
       setLoading(true);
 
-      const res = await axios.post(
-        "http://localhost:5000/auth/verify-otp",
-        {
-          walletAddress,
-          otp,
-        }
-      );
+      const res = await api.post("/auth/verify-otp", {
+        walletAddress,
+        otp,
+      });
 
       const { token } = res.data;
 
