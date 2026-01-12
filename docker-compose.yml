@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: mongo-express
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_SERVER: mongo
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongo
+
+  backend:
+    build: ./backend
+    container_name: issuer-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      EMAIL: ${EMAIL_USER}
+      EMAIL_APP_PASSWORD: ${EMAIL_PASS}
+    depends_on:
+      - mongo
+
+volumes:
+  mongo-data:
