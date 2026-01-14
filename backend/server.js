@@ -11,45 +11,26 @@ dotenv.config();
 
 const app = express();
 
-/* =====================================================
-   ✅ CORS CONFIG (LOCALHOST + LAN IP)
-   This FIXES your QR scan + phone access issue
-===================================================== */
-
+/* ===================== CORS ===================== */
 const allowedOrigins = [
   "http://localhost:3000",
-  "http://192.168.1.9:3000", // ✅ your Wi-Fi IP
+  "https://final-year-project-0dox.onrender.com",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow server-to-server & curl requests
       if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(null, true);
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Handle preflight requests
-// app.options("/*", cors());
-
-/* =====================================================
-   Middleware
-===================================================== */
 app.use(express.json());
 
-/* =====================================================
-   MongoDB Connection
-===================================================== */
+/* ===================== Mongo ===================== */
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
@@ -58,25 +39,17 @@ mongoose
     process.exit(1);
   });
 
-/* =====================================================
-   Routes
-===================================================== */
+/* ===================== Routes ===================== */
 app.use("/auth", authRoutes);
 app.use("/certificates", certificateRoutes);
 app.use("/verify", verifyRoutes);
 
-/* =====================================================
-   Health Check
-===================================================== */
 app.get("/", (req, res) => {
-  res.status(200).send("✅ Certificate Verification Server Running");
+  res.send("✅ Certificate Verification Server Running");
 });
 
-/* =====================================================
-   Server
-===================================================== */
-const PORT = 5000;
+/* ===================== Server ===================== */
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`✅ LAN access: http://192.168.1.9:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
