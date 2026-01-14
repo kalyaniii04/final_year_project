@@ -1,2 +1,2 @@
 const nonceStore = {};
-module.exports = nonceStore;
+export default nonceStore;

@@ -1,13 +1,14 @@
-const express = require("express");
-const router = express.Router();
+import express from "express";
 
-const authIssuer = require("../middleware/authIssure");
-const {
+import authIssuer from "../middleware/authIssure.js";
+import {
   issueCertificate,
   getIssuedCertificates,
-} = require("../controller/certificateController");
+} from "../controller/certificateController.js";
+
+const router = express.Router();
 
 router.post("/issue", authIssuer, issueCertificate);
 router.get("/issued", authIssuer, getIssuedCertificates);
 
-module.exports = router;
+export default router;

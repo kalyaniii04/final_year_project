@@ -6,6 +6,7 @@ import RegisterInstitute from "./pages/Issuer/RegisterInstitute";
 import IssueCertificate from "./pages/Issuer/IssueCertificate";
 import RevokeCertificate from "./pages/Issuer/RevokeCertificate";
 import VerifyCertificate from "./pages/Verifier";
+import VerifyCertificateQR from "./pages/VerifyCertificate";
 import ViewIssuedCertificates from "./pages/Issuer/ViewIssuedCertificates";
 import Student from "./pages/Student";
 
@@ -20,6 +21,7 @@ function App() {
       <Route path="/revoke-certificate" element={<RevokeCertificate />} />
       <Route path="/verify-certificate" element={<VerifyCertificate />} />
       <Route path="/issued-certificates" element={<ViewIssuedCertificates />} />
+      <Route path="/verify/:certificateId" element={<VerifyCertificateQR/>} />
       <Route path="/student-page" element={<Student />} />
     </Routes>
   );

@@ -1,6 +1,6 @@
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
 
-module.exports = function authIssuer(req, res, next) {
+function authIssuer(req, res, next) {
   try {
     // 1️⃣ Read Authorization header
     const authHeader = req.headers.authorization;
@@ -36,9 +36,9 @@ module.exports = function authIssuer(req, res, next) {
 
     // 6️⃣ Attach issuer info to request
     req.issuer = {
-      walletAddress: decoded.walletAddress,
-      email: decoded.email,
+      walletAddress: decoded.wallet,
       role: decoded.role,
+      mfa: decoded.mfa,
     };
 
     // 7️⃣ Allow request to continue
@@ -49,4 +49,6 @@ module.exports = function authIssuer(req, res, next) {
       message: "Token invalid or expired",
     });
   }
-};
+}
+
+export default authIssuer;

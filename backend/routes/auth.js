@@ -1,49 +1,56 @@
-const express = require("express");
-const { ethers } = require("ethers");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
-const nonceStore = require("../utils/nonceStore");
+import express from "express";
+import { ethers } from "ethers";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import nodemailer from "nodemailer";
 
-const otpStore = require("../utils/otpStore");
+import nonceStore from "../utils/nonceStore.js";
+import otpStore from "../utils/otpStore.js";
 
 const router = express.Router();
 
-/* ================================
+/* =====================================================
    EMAIL CONFIG
-================================ */
+===================================================== */
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Must be Gmail App Password
+    pass: process.env.EMAIL_PASS, // Gmail App Password
   },
 });
 
+/* =====================================================
+   1️⃣ REQUEST NONCE (Wallet Login – Step 1)
+===================================================== */
 router.post("/request-nonce", (req, res) => {
-  const { walletAddress } = req.body;
+  try {
+    const { walletAddress } = req.body;
 
-  if (!walletAddress || !ethers.isAddress(walletAddress)) {
-    return res.status(400).json({ error: "Invalid wallet address" });
+    if (!walletAddress || !ethers.isAddress(walletAddress)) {
+      return res.status(400).json({ error: "Invalid wallet address" });
+    }
+
+    const nonce = Math.floor(100000 + Math.random() * 900000).toString();
+
+    nonceStore[walletAddress] = {
+      nonce,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    };
+
+    res.json({
+      message: "Nonce generated",
+      nonce,
+    });
+  } catch (err) {
+    console.error("REQUEST NONCE ERROR:", err);
+    res.status(500).json({ error: "Failed to generate nonce" });
   }
-
-  const nonce = Math.floor(100000 + Math.random() * 900000).toString();
-
-  nonceStore[walletAddress] = {
-    nonce,
-    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
-  };
-
-  res.json({
-    message: "Nonce generated",
-    nonce,
-  });
 });
 
-
-/* ================================
-   1️⃣ WALLET LOGIN (Stage 2)
-================================ */
+/* =====================================================
+   2️⃣ VERIFY WALLET SIGNATURE
+===================================================== */
 router.post("/login", async (req, res) => {
   try {
     const { walletAddress, signature } = req.body;
@@ -53,7 +60,6 @@ router.post("/login", async (req, res) => {
     }
 
     const record = nonceStore[walletAddress];
-
     if (!record) {
       return res.status(401).json({ error: "Nonce not found" });
     }
@@ -70,7 +76,6 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid wallet signature" });
     }
 
-    // 🔥 IMPORTANT: invalidate nonce
     delete nonceStore[walletAddress];
 
     res.json({
@@ -83,10 +88,9 @@ router.post("/login", async (req, res) => {
   }
 });
 
-
-/* ================================
-   2️⃣ SEND OTP
-================================ */
+/* =====================================================
+   3️⃣ SEND OTP
+===================================================== */
 router.post("/send-otp", async (req, res) => {
   try {
     const { walletAddress, email } = req.body;
@@ -97,14 +101,12 @@ router.post("/send-otp", async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store OTP securely
     otpStore[walletAddress] = {
       hash: await bcrypt.hash(otp, 10),
       expiresAt: Date.now() + 5 * 60 * 1000,
       email,
     };
 
-    // Send OTP email
     await transporter.sendMail({
       from: `"Cert Issuer MFA" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -112,18 +114,16 @@ router.post("/send-otp", async (req, res) => {
       text: `Your OTP is ${otp}. It is valid for 5 minutes.`,
     });
 
-    console.log(`OTP sent to ${email}: ${otp}`);
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
-    console.error("SEND OTP ERROR:", err); // ✅ detailed error
-    res.status(500).json({ error: err.message || "Failed to send OTP" });
+    console.error("SEND OTP ERROR:", err);
+    res.status(500).json({ error: "Failed to send OTP" });
   }
 });
 
-
-/* ================================
-   3️⃣ VERIFY OTP + ISSUE JWT
-================================ */
+/* =====================================================
+   4️⃣ VERIFY OTP + ISSUE JWT
+===================================================== */
 router.post("/verify-otp", async (req, res) => {
   try {
     const { walletAddress, otp } = req.body;
@@ -133,7 +133,6 @@ router.post("/verify-otp", async (req, res) => {
     }
 
     const record = otpStore[walletAddress];
-
     if (!record) {
       return res.status(401).json({ error: "OTP not found" });
     }
@@ -144,15 +143,12 @@ router.post("/verify-otp", async (req, res) => {
     }
 
     const isValid = await bcrypt.compare(otp, record.hash);
-
     if (!isValid) {
       return res.status(401).json({ error: "Invalid OTP" });
     }
 
-    // OTP success → remove from store
     delete otpStore[walletAddress];
 
-    // Issue JWT token for MFA session
     const token = jwt.sign(
       {
         wallet: walletAddress,
@@ -173,4 +169,4 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,6 +1,6 @@
 const issuedCertificates = []; // TEMP in-memory store
 
-exports.issueCertificate = async (req, res) => {
+async function issueCertificate(req, res) {
   try {
     const { studentName, course } = req.body;
 
@@ -25,9 +25,9 @@ exports.issueCertificate = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Issue failed" });
   }
-};
+}
 
-exports.getIssuedCertificates = async (req, res) => {
+async function getIssuedCertificates(req, res) {
   try {
     const issuer = req.issuer.wallet;
 
@@ -39,4 +39,6 @@ exports.getIssuedCertificates = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Fetch failed" });
   }
-};
+}
+
+export { issueCertificate, getIssuedCertificates };
