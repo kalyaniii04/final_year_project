@@ -17,19 +17,14 @@ const abiJson = JSON.parse(
 const abi = abiJson.abi;
 
 /* =====================================================
-   Reliable Ethereum Providers (Fallback)
-   Replace YOUR_INFURA_KEY / YOUR_ALCHEMY_KEY with real keys
+   Ethereum Provider (Sepolia)
 ===================================================== */
-const providers = [
-  new ethers.JsonRpcProvider("https://sepolia.infura.io/v3/30650fddcd9c4ae5845345d25dd4967e"),
-  // You can add more RPCs here for fallback if needed
-  // new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY"),
-];
-
-const provider = new ethers.FallbackProvider(providers);
+const provider = new ethers.JsonRpcProvider(
+  "https://sepolia.infura.io/v3/30650fddcd9c4ae5845345d25dd4967e"
+);
 
 /* =====================================================
-   Contract Instance
+   Contract Instance (READ-ONLY)
 ===================================================== */
 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
 
@@ -37,44 +32,38 @@ const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
    GET /verify/:certificateId
 ===================================================== */
 router.get("/:certificateId", async (req, res) => {
-  const { certificateId } = req.params;
-
   try {
-    // ✅ Convert certificateId to bytes32 (padded string)
-    const certIdBytes = ethers.hexZeroPad(ethers.toUtf8Bytes(certificateId), 32);
+    const certificateId = req.params.certificateId;
 
-    // Fetch certificate from contract
+    // 🔑 MUST MATCH issueCertificate()
+    // You used ethers.id(certificateId) while issuing
+    const certIdBytes = ethers.id(certificateId);
+
+    // Call smart contract
     const cert = await contract.getCertificate(certIdBytes);
 
-    // Handle non-existent certificate
-    if (!cert || cert.fileHash === "0x") {
-      return res.status(404).json({
-        verified: false,
-        message: "Certificate not found",
-      });
-    }
-
-    // Return certificate details
+    // Success response
     res.json({
       verified: true,
       certificateId,
       studentName: cert.studentName,
-      course: cert.course,
+      course: cert.courseName,
       issuedTo: cert.student,
-      ipfsLink: cert.ipfsHash ? `https://ipfs.io/ipfs/${cert.ipfsHash}` : null,
+      instituteName: cert.instituteName,
+      instituteId: cert.instituteId,
+      ipfsLink: cert.ipfsHash
+        ? `https://ipfs.io/ipfs/${cert.ipfsHash.replace("ipfs://", "")}`
+        : null,
+      issuedAt: Number(cert.issuedAt),
+      revoked: cert.revoked,
     });
   } catch (err) {
-    console.error("❌ Verification error:", err);
+    console.error("❌ Verification error:", err.message);
 
-    // Optional: handle common Ethers v6 decode errors gracefully
-    let message = err.message;
-    if (err.code === "BAD_DATA") {
-      message = "Certificate does not exist or wrong ID format";
-    }
-
-    res.status(500).json({
+    // Any revert = certificate not found
+    res.status(404).json({
       verified: false,
-      message: "RPC or contract error: " + message,
+      message: "Certificate not found or invalid certificate ID",
     });
   }
 });
