@@ -2,7 +2,7 @@ import express from "express";
 import { ethers } from "ethers";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import nodemailer from "nodemailer";
+import SibApiV3Sdk from "sib-api-v3-sdk";
 
 import nonceStore from "../utils/nonceStore.js";
 import otpStore from "../utils/otpStore.js";
@@ -10,29 +10,12 @@ import otpStore from "../utils/otpStore.js";
 const router = express.Router();
 
 /* =====================================================
-   EMAIL CONFIG (BREVO)
+   BREVO API CONFIG (NO SMTP)
 ===================================================== */
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_USER, // "apikey"
-    pass: process.env.BREVO_PASS, // xkeysib-xxxx
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-});
+const client = SibApiV3Sdk.ApiClient.instance;
+client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
 
-// ✅ Verify SMTP once on startup
-transporter.verify((err) => {
-  if (err) {
-    console.error("❌ Brevo SMTP error:", err);
-  } else {
-    console.log("✅ Brevo SMTP ready");
-  }
-});
+const emailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
 /* =====================================================
    1️⃣ REQUEST NONCE (Wallet Login – Step 1)
@@ -103,7 +86,7 @@ router.post("/login", async (req, res) => {
 });
 
 /* =====================================================
-   3️⃣ SEND OTP
+   3️⃣ SEND OTP (BREVO API)
 ===================================================== */
 router.post("/send-otp", async (req, res) => {
   try {
@@ -121,12 +104,14 @@ router.post("/send-otp", async (req, res) => {
       email,
     };
 
-    // 🔥 Send email
-    await transporter.sendMail({
-      from: "Cert Issuer <no-reply@cert-project.com>",
-      to: email,
+    await emailApi.sendTransacEmail({
+      sender: {
+        email: "no-reply@cert-project.com",
+        name: "Cert Issuer MFA",
+      },
+      to: [{ email }],
       subject: "Issuer MFA OTP",
-      text: `Your OTP is ${otp}. It is valid for 5 minutes.`,
+      textContent: `Your OTP is ${otp}. It is valid for 5 minutes.`,
     });
 
     res.json({ message: "OTP sent successfully" });
