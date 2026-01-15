@@ -20,10 +20,15 @@ const __dirname = path.dirname(__filename);
 /* ================= CORS ================= */
 app.use(
   cors({
-    origin: "*",
+    origin: [
+      "http://localhost:3000",
+      "https://final-year-project-p0gs.onrender.com"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   })
 );
+
 
 app.use(express.json());
 
