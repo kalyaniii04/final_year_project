@@ -18,12 +18,14 @@ const abi = abiJson.abi;
 
 /* =====================================================
    Reliable Ethereum Providers (Fallback)
-   Replace YOUR_ALCHEMY_KEY / YOUR_INFURA_KEY with real keys
+   Replace YOUR_INFURA_KEY / YOUR_ALCHEMY_KEY with real keys
 ===================================================== */
 const providers = [
   new ethers.JsonRpcProvider("https://sepolia.infura.io/v3/30650fddcd9c4ae5845345d25dd4967e"),
-  // new ethers.JsonRpcProvider("https://sepolia.infura.io/v3/YOUR_INFURA_KEY"),
+  // Add more RPCs here for fallback if needed
+  // new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY"),
 ];
+
 const provider = new ethers.FallbackProvider(providers);
 
 /* =====================================================
@@ -38,13 +40,13 @@ router.get("/:certificateId", async (req, res) => {
   const { certificateId } = req.params;
 
   try {
-    // Convert certificateId string to bytes32 hash
-    const certIdBytes = ethers.id(certificateId);
+    // Convert certificateId to bytes32 (raw padded string)
+    const certIdBytes = ethers.hexZeroPad(ethers.toUtf8Bytes(certificateId), 32);
 
     // Fetch certificate from contract
     const cert = await contract.getCertificate(certIdBytes);
 
-    // Check if certificate exists
+    // If certificate does not exist
     if (!cert || cert.fileHash === "0x") {
       return res.status(404).json({
         verified: false,
@@ -52,7 +54,7 @@ router.get("/:certificateId", async (req, res) => {
       });
     }
 
-    // Respond with certificate details
+    // Return certificate details
     res.json({
       verified: true,
       certificateId,
