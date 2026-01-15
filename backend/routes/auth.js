@@ -106,7 +106,7 @@ router.post("/send-otp", async (req, res) => {
 
     await emailApi.sendTransacEmail({
       sender: {
-        email: "no-reply@cert-project.com",
+        email: "abc833904@gmail.com",
         name: "Cert Issuer MFA",
       },
       to: [{ email }],
