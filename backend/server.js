@@ -12,18 +12,14 @@ dotenv.config();
 const app = express();
 
 /* ===================== CORS ===================== */
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://final-year-project-0dox.onrender.com",
-];
-
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(null, true);
-    },
+    origin: [
+      "http://localhost:3000",
+      "https://final-year-project-p0gs.onrender.com",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );

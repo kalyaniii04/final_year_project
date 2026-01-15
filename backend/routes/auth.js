@@ -10,14 +10,28 @@ import otpStore from "../utils/otpStore.js";
 const router = express.Router();
 
 /* =====================================================
-   EMAIL CONFIG
+   EMAIL CONFIG (BREVO)
 ===================================================== */
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Gmail App Password
+    user: process.env.BREVO_USER, // "apikey"
+    pass: process.env.BREVO_PASS, // xkeysib-xxxx
   },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
+});
+
+// ✅ Verify SMTP once on startup
+transporter.verify((err) => {
+  if (err) {
+    console.error("❌ Brevo SMTP error:", err);
+  } else {
+    console.log("✅ Brevo SMTP ready");
+  }
 });
 
 /* =====================================================
@@ -107,8 +121,9 @@ router.post("/send-otp", async (req, res) => {
       email,
     };
 
+    // 🔥 Send email
     await transporter.sendMail({
-      from: `"Cert Issuer MFA" <${process.env.EMAIL_USER}>`,
+      from: "Cert Issuer <no-reply@cert-project.com>",
       to: email,
       subject: "Issuer MFA OTP",
       text: `Your OTP is ${otp}. It is valid for 5 minutes.`,

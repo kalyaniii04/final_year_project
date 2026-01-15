@@ -9,7 +9,7 @@ const VerifyCertificate = () => {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await axios.get(`https://final-year-project-0dox.onrender.com/verify/${certificateId}`);
+        const res = await axios.get(`https://final-year-project-p0gs.onrender.com/verify/${certificateId}`);
         setStatus(res.data);
       } catch (err) {
         setStatus({ verified: false, message: "Certificate not found or server error" });
