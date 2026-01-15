@@ -1,76 +1,72 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState } from "react";
 import axios from "axios";
 
 const VerifyCertificate = () => {
-  const { certificateId } = useParams();
+  const [certificateId, setCertificateId] = useState("");
+  const [fileHash, setFileHash] = useState("");
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await axios.get(
-          `https://final-year-project-p0gs.onrender.com/verify/${certificateId}`
-        );
-        setData(res.data);
-      } catch (err) {
-        setData({
-          verified: false,
-          status: "ERROR",
-          message: "Server error or certificate not found",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const verifyCertificate = async () => {
+    if (!certificateId || !fileHash) {
+      alert("Please enter Certificate ID and Hash");
+      return;
+    }
 
-    fetchStatus();
-  }, [certificateId]);
-
-  if (loading) return <p>⏳ Verifying certificate...</p>;
+    try {
+      setLoading(true);
+      const res = await axios.post(
+        "https://final-year-project-p0gs.onrender.com/verify",
+        { certificateId, fileHash }
+      );
+      setData(res.data);
+    } catch (err) {
+      setData({ verified: false, status: "ERROR", message: "Verification failed" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div style={{ padding: "20px", textAlign: "center" }}>
+    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
       <h2>🎓 Certificate Verification</h2>
 
-      {/* ❌ Not issued */}
-      {!data.verified && (
+      <input
+        type="text"
+        placeholder="Certificate ID"
+        value={certificateId}
+        onChange={(e) => setCertificateId(e.target.value)}
+        style={{ width: "100%", padding: "8px" }}
+      />
+      <br /><br />
+
+      <textarea
+        placeholder="Certificate Hash (SHA-256)"
+        value={fileHash}
+        onChange={(e) => setFileHash(e.target.value)}
+        rows={4}
+        style={{ width: "100%", padding: "8px" }}
+      />
+      <br /><br />
+
+      <button onClick={verifyCertificate} style={{ padding: "10px 20px" }}>
+        {loading ? "Verifying..." : "Verify Certificate"}
+      </button>
+
+      <hr />
+
+      {/* RESULTS */}
+      {data && !data.verified && (
         <div style={{ color: "red" }}>
-          <h3>❌ Certificate Not Found</h3>
-          <p>{data.message}</p>
+          <h3>❌ Verification Failed</h3>
+          <p>{data.message || data.status}</p>
         </div>
       )}
 
-      {/* 🔴 Revoked */}
-      {data.verified && data.status === "REVOKED" && (
-        <div style={{ color: "red" }}>
-          <h3>🚫 Certificate Revoked</h3>
-          <p><strong>Certificate ID:</strong> {certificateId}</p>
-          <p>
-            <strong>Revoked At:</strong>{" "}
-            {data.revokedAt
-              ? new Date(data.revokedAt * 1000).toLocaleString()
-              : "Unknown"}
-          </p>
-        </div>
-      )}
-
-      {/* ✅ Valid */}
-      {data.verified && data.status === "VALID" && (
+      {data && data.verified && (
         <div style={{ color: "green" }}>
-          <h3>✅ Certificate Valid</h3>
-
-          <p><strong>Certificate ID:</strong> {data.certificateId}</p>
-          <p><strong>Student Name:</strong> {data.studentName}</p>
-          <p><strong>Course:</strong> {data.courseName}</p>
-          <p><strong>Student Wallet:</strong> {data.studentWallet}</p>
-          <p><strong>Issuer Wallet:</strong> {data.issuerWallet}</p>
-          <p>
-            <strong>Issued At:</strong>{" "}
-            {new Date(data.issuedAt * 1000).toLocaleDateString()}
-          </p>
-
+          <h3>✅ Certificate {data.status}</h3>
+          <p><strong>Issued At:</strong> {new Date(data.issuedAt * 1000).toLocaleDateString()}</p>
           {data.ipfsLink && (
             <p>
               <a href={data.ipfsLink} target="_blank" rel="noreferrer">
