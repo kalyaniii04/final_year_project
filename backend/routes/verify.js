@@ -22,7 +22,7 @@ const abi = abiJson.abi;
 ===================================================== */
 const providers = [
   new ethers.JsonRpcProvider("https://sepolia.infura.io/v3/30650fddcd9c4ae5845345d25dd4967e"),
-  // Add more RPCs here for fallback if needed
+  // You can add more RPCs here for fallback if needed
   // new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY"),
 ];
 
@@ -40,13 +40,13 @@ router.get("/:certificateId", async (req, res) => {
   const { certificateId } = req.params;
 
   try {
-    // Convert certificateId to bytes32 (raw padded string)
+    // ✅ Convert certificateId to bytes32 (padded string)
     const certIdBytes = ethers.hexZeroPad(ethers.toUtf8Bytes(certificateId), 32);
 
     // Fetch certificate from contract
     const cert = await contract.getCertificate(certIdBytes);
 
-    // If certificate does not exist
+    // Handle non-existent certificate
     if (!cert || cert.fileHash === "0x") {
       return res.status(404).json({
         verified: false,
@@ -65,9 +65,16 @@ router.get("/:certificateId", async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Verification error:", err);
+
+    // Optional: handle common Ethers v6 decode errors gracefully
+    let message = err.message;
+    if (err.code === "BAD_DATA") {
+      message = "Certificate does not exist or wrong ID format";
+    }
+
     res.status(500).json({
       verified: false,
-      message: "RPC or contract error: " + err.message,
+      message: "RPC or contract error: " + message,
     });
   }
 });
