@@ -15,7 +15,7 @@ import {
   Alert,
 } from "@mui/material";
 import { connectWallet } from "../../utils/connectWallet";
-import { ethers } from "ethers";
+// import { ethers } from "ethers";
 
 /**
  * ViewIssuedCertificates Component
