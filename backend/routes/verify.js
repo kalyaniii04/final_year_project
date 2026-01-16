@@ -7,7 +7,10 @@ const router = express.Router();
 
 /* ================= ABI ================= */
 const abiJson = JSON.parse(
-  fs.readFileSync(new URL("../abi/CertificateRegistry.abi.json", import.meta.url), "utf-8")
+  fs.readFileSync(
+    new URL("../abi/CertificateRegistry.abi.json", import.meta.url),
+    "utf-8"
+  )
 );
 const abi = abiJson.abi;
 
@@ -20,102 +23,51 @@ const provider = new ethers.JsonRpcProvider(
 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
 
 /* =====================================================
-   GET Certificate Details by ID (QR / URL)
+   VERIFY CERTIFICATE (STATUS ONLY)
 ===================================================== */
 router.get("/:certificateId", async (req, res) => {
   try {
-    const certificateId = req.params.certificateId.trim();
-    console.log("🔹 Verifying certificate:", certificateId);
+    const certificateId = req.params.certificateId?.trim();
 
-    const certIdBytes = ethers.id(certificateId);
-    const cert = await contract.getCertificate(certIdBytes);
-
-    // ✅ IMPORTANT: existence check
-    if (cert.issuedAt === 0n) {
-      return res.status(404).json({
-        verified: false,
-        status: "NOT_FOUND",
-        message: "Certificate not issued on blockchain",
-      });
-    }
-
-    return res.json({
-      verified: true,
-      status: cert.revoked ? "REVOKED" : "VALID",
-
-      certificateId,
-      studentName: cert.studentName,
-      courseName: cert.courseName,
-
-      studentWallet: cert.student,
-      issuerWallet: cert.issuer,
-
-      instituteName: cert.instituteName,
-      instituteId: cert.instituteId,
-
-      issuedAt: Number(cert.issuedAt),
-      revoked: cert.revoked,
-      revokedAt: cert.revokedAt ? Number(cert.revokedAt) : null,
-    });
-  } catch (err) {
-    console.error("❌ Verification error:", err);
-    return res.status(500).json({
-      verified: false,
-      status: "ERROR",
-      message: "Verification failed",
-    });
-  }
-});
-
-
-/* =====================================================
-   POST Manual SHA-256 Hash Verification
-===================================================== */
-router.post("/", async (req, res) => {
-  try {
-    const { certificateId, fileHash } = req.body;
-
-    if (!certificateId || !fileHash) {
+    if (!certificateId) {
       return res.status(400).json({
         verified: false,
-        message: "Certificate ID and hash are required",
+        message: "Certificate ID required"
       });
     }
 
-    const certIdBytes = ethers.id(certificateId.trim());
-    const cert = await contract.getCertificate(certIdBytes);
+    const certIdBytes = ethers.id(certificateId);
 
-    if (cert.issuedAt === 0n) {
+    let cert;
+    try {
+      cert = await contract.getCertificate(certIdBytes);
+    } catch {
       return res.status(404).json({
         verified: false,
         status: "NOT_FOUND",
-        message: "Certificate not issued on blockchain",
-      });
-    }
-
-    const onChainHash = cert.fileHash.toLowerCase();
-    const enteredHash = "0x" + fileHash.toLowerCase().replace(/^0x/, "");
-
-    if (onChainHash !== enteredHash) {
-      return res.json({
-        verified: false,
-        status: "HASH_MISMATCH",
-        message: "Certificate hash does not match",
+        message: "Certificate not found on blockchain"
       });
     }
 
     return res.json({
       verified: true,
       status: cert.revoked ? "REVOKED" : "VALID",
-      issuedAt: Number(cert.issuedAt),
       revoked: cert.revoked,
+      issuedAt: Number(cert.issuedAt),
+
+      // Student + Institute info
+      studentName: cert.studentName,
+      courseName: cert.courseName,
+      instituteName: cert.instituteName,
+      instituteId: cert.instituteId
     });
+
   } catch (err) {
-    console.error("❌ Hash verification error:", err);
+    console.error("❌ Verify error:", err);
     return res.status(500).json({
       verified: false,
       status: "ERROR",
-      message: "Verification failed",
+      message: "Internal server error"
     });
   }
 });
