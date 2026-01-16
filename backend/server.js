@@ -47,17 +47,17 @@ app.use("/certificates", certificateRoutes);
 app.use("/verify", verifyRoutes);
 
 /* ================= Serve React ================= */
-app.use(
-  express.static(path.join(__dirname, "../frontend/build"))
-);
+// app.use(
+//   express.static(path.join(__dirname, "../frontend/build"))
+// );
 
-/* ✅ DO NOT USE app.get("*") */
-/* ✅ USE THIS INSTEAD */
-app.get(/^\/(?!verify|auth|certificates).*/, (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "../frontend/build/index.html")
-  );
-});
+// /* ✅ DO NOT USE app.get("*") */
+// /* ✅ USE THIS INSTEAD */
+// app.get(/^\/(?!verify|auth|certificates).*/, (req, res) => {
+//   res.sendFile(
+//     path.join(__dirname, "../frontend/build/index.html")
+//   );
+// });
 
 /* ================= Server ================= */
 const PORT = process.env.PORT || 5000;
