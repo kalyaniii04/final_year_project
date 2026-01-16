@@ -6,7 +6,6 @@ const VerifyCertificate = () => {
   const { certificateId: qrCertificateId } = useParams();
 
   const [certificateId, setCertificateId] = useState("");
-  const [fileHash, setFileHash] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,30 +16,28 @@ const VerifyCertificate = () => {
   // ===============================
   useEffect(() => {
     if (qrCertificateId) {
-      console.log("📱 QR scanned, certificateId:", qrCertificateId);
       setCertificateId(qrCertificateId);
-      verifyById(qrCertificateId);
+      verifyCertificate(qrCertificateId);
     }
     // eslint-disable-next-line
   }, [qrCertificateId]);
 
   // ===============================
-  // Verify by certificate ID
+  // Verify certificate
   // ===============================
-  const verifyById = async (certId) => {
-    console.log("🔹 Verifying by ID:", certId);
+  const verifyCertificate = async (certId) => {
     try {
       setLoading(true);
+
       const res = await axios.get(
         `https://final-year-project-p0gs.onrender.com/verify/${certId.trim()}`
       );
-      console.log("✅ Backend response:", res.data);
+
       setData(res.data);
     } catch (err) {
-      console.error("❌ Verification failed:", err.response?.data || err.message);
+      console.error("Verification failed:", err.response?.data || err.message);
       setData({
         verified: false,
-        status: "NOT_FOUND",
         message: "Certificate not found on blockchain",
       });
     } finally {
@@ -48,128 +45,55 @@ const VerifyCertificate = () => {
     }
   };
 
-  // ===============================
-  // Verify by file hash (strong verification)
-  // ===============================
-  const verifyByHash = async () => {
-    if (!certificateId || !fileHash) {
-      alert("Please enter Certificate ID and Hash");
-      return;
-    }
-
-    const cleanCertId = certificateId.trim();
-    const cleanHash = fileHash.replace(/\s+/g, "").toLowerCase();
-    const normalizedHash = cleanHash.startsWith("0x")
-      ? cleanHash
-      : "0x" + cleanHash;
-
-    console.log("🔹 Verifying by hash:", {
-      certificateId: cleanCertId,
-      normalizedHash,
-    });
-
-    try {
-      setLoading(true);
-      const res = await axios.post(
-        "https://final-year-project-p0gs.onrender.com/verify",
-        {
-          certificateId: cleanCertId,
-          fileHash: normalizedHash,
-        }
-      );
-      console.log("✅ Backend response:", res.data);
-      setData(res.data);
-    } catch (err) {
-      console.error("❌ Verification by hash failed:", err.response?.data || err.message);
-      setData({
-        verified: false,
-        status: "ERROR",
-        message: err.response?.data?.message || "Verification failed",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ===============================
-  // Verify button handler
-  // ===============================
-  const handleVerify = () => {
-    if (!fileHash) {
-      verifyById(certificateId);
-    } else {
-      verifyByHash();
-    }
-  };
-
-  // ===============================
-  // UI
-  // ===============================
   return (
-    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
-      <h2>🎓 Certificate Verification (Debug)</h2>
+    <div style={{ maxWidth: "600px", margin: "auto", padding: "20px" }}>
+      <h2>🎓 Certificate Verification</h2>
 
       {!isQRMode && (
         <>
           <input
             type="text"
-            placeholder="Certificate ID"
+            placeholder="Enter Certificate ID"
             value={certificateId}
             onChange={(e) => setCertificateId(e.target.value)}
             style={{ width: "100%", padding: "8px" }}
           />
           <br /><br />
-
-          <textarea
-            placeholder="Certificate Hash (SHA-256) — optional"
-            value={fileHash}
-            onChange={(e) => setFileHash(e.target.value)}
-            rows={4}
-            style={{ width: "100%", padding: "8px" }}
-          />
-          <br /><br />
-
-          <button onClick={handleVerify} style={{ padding: "10px 20px" }}>
-            {loading ? "Verifying..." : "Verify Certificate"}
+          <button onClick={() => verifyCertificate(certificateId)}>
+            Verify
           </button>
         </>
       )}
 
-      {isQRMode && loading && <p>🔍 Verifying certificate...</p>}
+      {loading && <p>🔍 Verifying...</p>}
 
       <hr />
 
-      {/* RESULTS */}
+      {/* ❌ Failed */}
       {data && !data.verified && (
         <div style={{ color: "red" }}>
           <h3>❌ Verification Failed</h3>
-          <p>{data.message || data.status}</p>
+          <p>{data.message}</p>
         </div>
       )}
 
+      {/* ✅ Success */}
       {data && data.verified && (
         <div style={{ color: "green" }}>
-          <h3>✅ Certificate {data.status}</h3>
-          <p><strong>Certificate ID:</strong> {certificateId}</p>
+          <h3>✅ Certificate Verified</h3>
 
-          {data.issuedAt && (
-            <p>
-              <strong>Issued At:</strong>{" "}
-              {new Date(data.issuedAt * 1000).toLocaleDateString()}
-            </p>
-          )}
+          <p><strong>Certificate ID:</strong> {certificateId}</p>
+          <p><strong>Student Name:</strong> {data.studentName}</p>
+          <p><strong>Course:</strong> {data.course}</p>
+
+          <p>
+            <strong>Issued On:</strong>{" "}
+            {new Date(data.issuedAt * 1000).toLocaleDateString()}
+          </p>
 
           {data.revoked && (
             <p style={{ color: "red", fontWeight: "bold" }}>
               🚫 This certificate has been revoked
-            </p>
-          )}
-
-          {data.ipfsLink && (
-            <p>
-              <a href={data.ipfsLink} target="_blank" rel="noreferrer">
-                📄 View Certificate on IPFS
-              </a>
             </p>
           )}
         </div>

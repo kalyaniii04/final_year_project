@@ -3,8 +3,11 @@ import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import axios from "axios";
 import { ethers } from "ethers";
-import CertificateRegistry from "../../CertificateRegistry.json"; // ✅ ABI file
-import { CONTRACT_ADDRESS } from "../../contractConfig"; // ✅ Contract address
+
+import CertificateRegistry from "../../CertificateRegistry.json";
+import { CONTRACT_ADDRESS } from "../../contractConfig";
+
+const FRONTEND_URL = "https://final-year-project-khvy.vercel.app";
 
 const IssueCertificate = () => {
   const [studentName, setStudentName] = useState("");
@@ -12,255 +15,227 @@ const IssueCertificate = () => {
   const [course, setCourse] = useState("");
   const [studentAddress, setStudentAddress] = useState("");
   const [issueDate, setIssueDate] = useState("");
+
   const [fileHash, setFileHash] = useState("");
   const [pdfBlob, setPdfBlob] = useState(null);
+
+  const [contract, setContract] = useState(null);
+  const [account, setAccount] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
-  const [account, setAccount] = useState("");
-  const [contract, setContract] = useState(null);
 
-  // ==============================
-  // 🔗 Connect Wallet
-  // ==============================
+  /* ===============================
+      CONNECT WALLET
+  =============================== */
   const connectWallet = async () => {
     if (!window.ethereum) {
-      alert("Please install MetaMask first!");
+      alert("Install MetaMask");
       return;
     }
 
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const accounts = await provider.send("eth_requestAccounts", []);
-      const connectedAccount = accounts[0];
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const accounts = await provider.send("eth_requestAccounts", []);
 
-      // Log network info
-      const network = await provider.getNetwork();
-      console.log("✅ Connected to network:", network.name, "Chain ID:", network.chainId);
+    const contractInstance = new ethers.Contract(
+      CONTRACT_ADDRESS,
+      CertificateRegistry.abi,
+      signer
+    );
 
-      // Debug ABI contents
-      console.log("✅ Contract ABI Functions:");
-      console.log(CertificateRegistry.abi.map((f) => f.name));
+    setAccount(accounts[0]);
+    setContract(contractInstance);
 
-      // Create contract instance
-      const contractInstance = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        CertificateRegistry.abi,
-        signer
-      );
-
-      console.log("✅ Contract Address:", CONTRACT_ADDRESS);
-      console.log("✅ Contract Instance Methods:");
-      console.log(contractInstance.interface.fragments.map((f) => f.name));
-
-      setAccount(connectedAccount);
-      setContract(contractInstance);
-      alert("✅ Wallet connected: " + connectedAccount);
-    } catch (err) {
-      console.error("❌ Wallet connection failed:", err);
-      alert("❌ Wallet connection failed: " + err.message);
-    }
+    alert("Wallet connected");
   };
 
-  // ==============================
-  // 🔐 SHA-256 Hash Helper
-  // ==============================
-  async function computeSHA256(buffer) {
+  /* ===============================
+      SHA-256
+  =============================== */
+  const computeSHA256 = async (buffer) => {
     const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
+    return (
+      "0x" +
+      Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+    );
+  };
 
-  // ==============================
-  // 🧾 Generate PDF + Compute Hash
-  // ==============================
+  /* ===============================
+      GENERATE PDF
+  =============================== */
   const generatePDF = async () => {
     if (!studentName || !certificateId || !course || !studentAddress || !issueDate) {
-      alert("🚨 Please fill all fields!");
+      alert("Fill all fields");
       return;
     }
 
-    const pdf = new jsPDF({ unit: "pt", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    const pdf = new jsPDF("p", "pt", "a4");
+    const width = pdf.internal.pageSize.getWidth();
+    const height = pdf.internal.pageSize.getHeight();
 
+    // Border
     pdf.setLineWidth(2);
-    pdf.rect(40, 40, pageWidth - 80, pageHeight - 80);
+    pdf.rect(40, 40, width - 80, height - 80);
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(28);
-    pdf.text("CERTIFICATE OF COMPLETION", pageWidth / 2, 120, { align: "center" });
+    pdf.text("CERTIFICATE OF COMPLETION", width / 2, 120, { align: "center" });
 
     pdf.setFontSize(24);
     pdf.setFont("times", "bolditalic");
-    pdf.text(studentName, pageWidth / 2, 210, { align: "center" });
+    pdf.text(studentName, width / 2, 210, { align: "center" });
 
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(16);
-    pdf.text("has successfully completed the course", pageWidth / 2, 250, { align: "center" });
+    pdf.text("has successfully completed the course", width / 2, 250, {
+      align: "center",
+    });
 
     pdf.setFont("times", "italic");
     pdf.setFontSize(20);
-    pdf.text(`"${course}"`, pageWidth / 2, 280, { align: "center" });
+    pdf.text(`"${course}"`, width / 2, 280, { align: "center" });
 
     pdf.setFontSize(12);
     pdf.text(`Certificate ID: ${certificateId}`, 80, 340);
     pdf.text(`Issued On: ${issueDate}`, 80, 360);
-    pdf.text(`Wallet Address:`, 80, 380);
-    pdf.text(`${studentAddress}`, 80, 400, { maxWidth: pageWidth - 160 });
+    pdf.text("Wallet Address:", 80, 380);
+    pdf.text(studentAddress, 80, 400, { maxWidth: width - 160 });
 
-    const FRONTEND_URL = "https://final-year-project-khvy.vercel.app";
+    // QR
     const verifyURL = `${FRONTEND_URL}/verify/${certificateId}`;
-    const qrCodeDataURL = await QRCode.toDataURL(verifyURL);
-    pdf.addImage(qrCodeDataURL, "PNG", pageWidth / 2 - 70, pageHeight - 250, 140, 140);
+    const qr = await QRCode.toDataURL(verifyURL);
+    pdf.addImage(qr, "PNG", width / 2 - 70, height - 250, 140, 140);
 
-    // Step 1: Compute Hash
-    const blobPDF = pdf.output("blob");
-    const arrayBuffer = await blobPDF.arrayBuffer();
-    const hash = await computeSHA256(arrayBuffer);
+    // Hash
+    const blob = pdf.output("blob");
+    const buffer = await blob.arrayBuffer();
+    const hash = await computeSHA256(buffer);
 
-    // Step 2: Print hash on PDF
     pdf.setFont("courier", "normal");
     pdf.setFontSize(10);
-    pdf.text(`Certificate Hash (SHA-256):`, 80, pageHeight - 100);
-    pdf.text(`${hash}`, 80, pageHeight - 80, { maxWidth: pageWidth - 160 });
+    pdf.text("Certificate Hash (SHA-256):", 80, height - 100);
+    pdf.text(hash, 80, height - 80, { maxWidth: width - 160 });
 
     const finalBlob = pdf.output("blob");
 
-    setFileHash(hash);
     setPdfBlob(finalBlob);
+    setFileHash(hash);
 
-    console.log("✅ Generated Certificate Hash:", hash);
-    alert("✅ PDF Created, Hash Generated & Printed on Certificate!");
+    alert("PDF Generated");
   };
 
-  // ==============================
-  // 🚀 Upload to IPFS + Blockchain
-  // ==============================
+  /* ===============================
+      UPLOAD IPFS + BLOCKCHAIN
+  =============================== */
   const uploadToBlockchain = async () => {
-    if (!pdfBlob) {
-      alert("Please generate the certificate first!");
-      return;
-    }
-    if (!contract || !account) {
-      alert("Please connect your wallet first!");
+    if (!contract || !pdfBlob) {
+      alert("Connect wallet & generate PDF");
       return;
     }
 
     try {
       setLoading(true);
-      setStatus("⏳ Uploading to IPFS and Blockchain...");
+      setStatus("Uploading...");
 
-      const file = new File([pdfBlob], `${certificateId}.pdf`, { type: "application/pdf" });
+      const file = new File([pdfBlob], `${certificateId}.pdf`);
       const formData = new FormData();
       formData.append("file", file);
 
-      // ✅ Upload to Pinata
-      console.log("📤 Uploading file to Pinata...");
-      const resFile = await axios.post(
+      const ipfsRes = await axios.post(
         "https://api.pinata.cloud/pinning/pinFileToIPFS",
         formData,
         {
           headers: {
             pinata_api_key: process.env.REACT_APP_PINATA_API_KEY,
             pinata_secret_api_key: process.env.REACT_APP_PINATA_SECRET_API_KEY,
-            "Content-Type": "multipart/form-data",
           },
         }
       );
 
-      const ipfsHash = `ipfs://${resFile.data.IpfsHash}`;
-      console.log("✅ Uploaded to IPFS:", ipfsHash);
-
-      // ✅ Prepare blockchain arguments
-      const certIdBytes = ethers.id(certificateId);
-      const fileHashBytes = "0x" + fileHash;
-
-      console.log("📊 Transaction Arguments:");
-      console.log({
-        certIdBytes,
-        studentAddress,
-        fileHashBytes,
-        studentName,
-        course,
-      });
-
-      console.log("📡 Calling contract.issueCertificate...");
+      const ipfsHash = `ipfs://${ipfsRes.data.IpfsHash}`;
 
       const tx = await contract.issueCertificate(
-  certIdBytes,
-  studentAddress,
-  fileHashBytes,
-  ipfsHash,           // ✅ PASS IT
-  studentName,
-  course
-);
+        ethers.id(certificateId.trim()),
+        studentAddress,
+        fileHash,
+        ipfsHash,
+        studentName,
+        course
+      );
 
-
-      console.log("⏳ Waiting for transaction confirmation...");
       await tx.wait();
-
-      setStatus(`✅ Certificate stored on Blockchain! Tx Hash: ${tx.hash}`);
-      console.log("🎉 Certificate successfully stored! Tx:", tx.hash);
-      alert("🎉 Certificate successfully uploaded!");
+      setStatus("✅ Certificate stored on blockchain");
     } catch (err) {
-      console.error("❌ Upload failed:", err);
-      setStatus("❌ Upload failed: " + (err.reason || err.message));
-      alert("❌ Upload failed: " + (err.reason || err.message));
+      console.error(err);
+      setStatus("❌ Error: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ==============================
-  // 🧱 UI
-  // ==============================
+  /* ===============================
+      UI
+  =============================== */
   return (
-    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
-      <h2>🎓 Issue & Upload Certificate (Debug Build)</h2>
+    <div style={{ maxWidth: 600, margin: "auto", padding: 20 }}>
+      <h2>🎓 Issue Certificate</h2>
 
       <button onClick={connectWallet}>🔗 Connect Wallet</button>
-      {account && <p><strong>Connected Account:</strong> {account}</p>}
+      {account && <p>{account}</p>}
 
+      <br/>
       <hr />
+      <br />
+      <br/>
+      <input placeholder="Student Name" onChange={(e) => setStudentName(e.target.value)} />
+      <br />
+      <br />
+      <input placeholder="Certificate ID" onChange={(e) => setCertificateId(e.target.value)} />
+      <br />
+      <br />
+      <input placeholder="Student Wallet" onChange={(e) => setStudentAddress(e.target.value)} />
+      <br />
+      <br />
+      <input placeholder="Course Name" onChange={(e) => setCourse(e.target.value)} />
+      <br />
+      <br />
+      <input type="date" onChange={(e) => setIssueDate(e.target.value)} />
+      <br />
+      <br />
+      
 
-      <input type="text" placeholder="Student Name" value={studentName} onChange={(e) => setStudentName(e.target.value)} /><br /><br />
-      <input type="text" placeholder="Certificate ID" value={certificateId} onChange={(e) => setCertificateId(e.target.value)} /><br /><br />
-      <input type="text" placeholder="Student Wallet Address" value={studentAddress} onChange={(e) => setStudentAddress(e.target.value)} /><br /><br />
-      <input type="text" placeholder="Course Name" value={course} onChange={(e) => setCourse(e.target.value)} /><br /><br />
-      <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /><br /><br />
-
-      <button onClick={generatePDF}>📄 Generate Certificate</button><br /><br />
-
-      {fileHash && (
-        <p><strong>SHA-256 Hash:</strong><br /><code>{fileHash}</code></p>
-      )}
+      <button onClick={generatePDF}>📄 Generate Certificate</button>
+      <br />
+      <br />
 
       {pdfBlob && (
-        <button
-          onClick={() => {
-            const url = URL.createObjectURL(pdfBlob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `${certificateId}.pdf`;
-            link.click();
-            URL.revokeObjectURL(url);
-          }}
-        >
-          ⬇️ Download PDF
-        </button>
+        <>
+          <p><strong>Hash:</strong> {fileHash}</p>
+          <button
+            onClick={() => {
+              const url = URL.createObjectURL(pdfBlob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `${certificateId}.pdf`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            ⬇️ Download Certificate
+          </button>
+        </>
       )}
-      <br /><br />
 
-      <button disabled={!pdfBlob || loading} onClick={uploadToBlockchain}>
-        {loading ? "Uploading..." : "🚀 Upload to IPFS & Blockchain"}
+      <br />
+      <br />
+      
+      <button disabled={loading} onClick={uploadToBlockchain}>
+        🚀 Upload to Blockchain
       </button>
 
-      {status && (
-        <p style={{ marginTop: "20px", color: status.includes("✅") ? "green" : "red" }}>
-          {status}
-        </p>
-      )}
+      <p>{status}</p>
     </div>
   );
 };
