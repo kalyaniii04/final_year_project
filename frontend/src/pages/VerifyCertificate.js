@@ -12,28 +12,32 @@ const VerifyCertificate = () => {
 
   const isQRMode = !!qrCertificateId;
 
-  /* ===============================
-     AUTO VERIFY WHEN QR IS SCANNED
-  =============================== */
+  // ===============================
+  // Auto verify on QR scan
+  // ===============================
   useEffect(() => {
     if (qrCertificateId) {
+      console.log("📱 QR scanned, certificateId:", qrCertificateId);
       setCertificateId(qrCertificateId);
       verifyById(qrCertificateId);
     }
     // eslint-disable-next-line
   }, [qrCertificateId]);
 
-  /* ===============================
-     VERIFY BY CERTIFICATE ID (QR)
-  =============================== */
+  // ===============================
+  // Verify by certificate ID
+  // ===============================
   const verifyById = async (certId) => {
+    console.log("🔹 Verifying by ID:", certId);
     try {
       setLoading(true);
       const res = await axios.get(
         `https://final-year-project-p0gs.onrender.com/verify/${certId.trim()}`
       );
+      console.log("✅ Backend response:", res.data);
       setData(res.data);
     } catch (err) {
+      console.error("❌ Verification failed:", err.response?.data || err.message);
       setData({
         verified: false,
         status: "NOT_FOUND",
@@ -44,9 +48,9 @@ const VerifyCertificate = () => {
     }
   };
 
-  /* ===============================
-     VERIFY BY HASH (STRONG VERIFY)
-  =============================== */
+  // ===============================
+  // Verify by file hash (strong verification)
+  // ===============================
   const verifyByHash = async () => {
     if (!certificateId || !fileHash) {
       alert("Please enter Certificate ID and Hash");
@@ -59,6 +63,11 @@ const VerifyCertificate = () => {
       ? cleanHash
       : "0x" + cleanHash;
 
+    console.log("🔹 Verifying by hash:", {
+      certificateId: cleanCertId,
+      normalizedHash,
+    });
+
     try {
       setLoading(true);
       const res = await axios.post(
@@ -68,8 +77,10 @@ const VerifyCertificate = () => {
           fileHash: normalizedHash,
         }
       );
+      console.log("✅ Backend response:", res.data);
       setData(res.data);
     } catch (err) {
+      console.error("❌ Verification by hash failed:", err.response?.data || err.message);
       setData({
         verified: false,
         status: "ERROR",
@@ -80,9 +91,9 @@ const VerifyCertificate = () => {
     }
   };
 
-  /* ===============================
-     VERIFY BUTTON HANDLER
-  =============================== */
+  // ===============================
+  // Verify button handler
+  // ===============================
   const handleVerify = () => {
     if (!fileHash) {
       verifyById(certificateId);
@@ -91,12 +102,12 @@ const VerifyCertificate = () => {
     }
   };
 
-  /* ===============================
-     UI
-  =============================== */
+  // ===============================
+  // UI
+  // ===============================
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
-      <h2>🎓 Certificate Verification</h2>
+      <h2>🎓 Certificate Verification (Debug)</h2>
 
       {!isQRMode && (
         <>
@@ -139,7 +150,6 @@ const VerifyCertificate = () => {
       {data && data.verified && (
         <div style={{ color: "green" }}>
           <h3>✅ Certificate {data.status}</h3>
-
           <p><strong>Certificate ID:</strong> {certificateId}</p>
 
           {data.issuedAt && (

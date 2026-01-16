@@ -109,7 +109,8 @@ const IssueCertificate = () => {
     pdf.text(`Wallet Address:`, 80, 380);
     pdf.text(`${studentAddress}`, 80, 400, { maxWidth: pageWidth - 160 });
 
-    const verifyURL = `https://final-year-project-p0gs.onrender.com/verify/${certificateId}`;
+    const FRONTEND_URL = "https://final-year-project-khvy.vercel.app";
+    const verifyURL = `${FRONTEND_URL}/verify/${certificateId}`;
     const qrCodeDataURL = await QRCode.toDataURL(verifyURL);
     pdf.addImage(qrCodeDataURL, "PNG", pageWidth / 2 - 70, pageHeight - 250, 140, 140);
 
