@@ -1,15 +1,18 @@
 const hre = require("hardhat");
 
 async function main() {
+  console.log("🚀 Deploying CertificateRegistry...");
+
   const CertificateRegistry = await hre.ethers.getContractFactory("CertificateRegistry");
   const contract = await CertificateRegistry.deploy();
 
   await contract.waitForDeployment();
-  console.log("✅ Contract deployed at:", await contract.getAddress());
+
+  const address = await contract.getAddress();
+  console.log("✅ CertificateRegistry deployed at:", address);
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error("❌ Deployment failed:", error);
   process.exit(1);
 });
-

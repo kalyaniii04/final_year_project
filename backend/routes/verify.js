@@ -72,4 +72,8 @@ router.get("/:certificateId", async (req, res) => {
   }
 });
 
+// console.log("Cert ID:", certificateId);
+// console.log("Bytes32:", certIdBytes);
+
+
 export default router;

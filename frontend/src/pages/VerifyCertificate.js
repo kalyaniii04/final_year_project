@@ -10,8 +10,11 @@ const VerifyCertificate = () => {
   useEffect(() => {
     axios
       .get(`https://final-year-project-p0gs.onrender.com/verify/${certificateId}`)
-      .then((res) => setData(res.data))
-      .catch((err) =>
+      .then((res) => {
+        console.log("Raw validation result:", res.data);
+        setData(res.data);
+      })
+      .catch(() =>
         setData({
           verified: false,
           status: "NOT_FOUND",
@@ -25,7 +28,7 @@ const VerifyCertificate = () => {
 
   if (!data?.verified) {
     return (
-      <div style={{ color: "red" }}>
+      <div style={{ color: "red", textAlign: "center" }}>
         <h2>❌ Verification Failed</h2>
         <p>{data.message}</p>
       </div>
@@ -35,7 +38,9 @@ const VerifyCertificate = () => {
   return (
     <div style={{ padding: "20px", maxWidth: "500px", margin: "auto" }}>
       <h2>
-        {data.status === "VALID" ? "✅ Certificate Verified" : "🚫 Certificate Revoked"}
+        {data.status === "VALID"
+          ? "✅ Certificate Verified"
+          : "🚫 Certificate Revoked"}
       </h2>
 
       <p><strong>Status:</strong> {data.status}</p>
