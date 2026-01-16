@@ -59,6 +59,11 @@ app.use("/verify", verifyRoutes);
 //   );
 // });
 
+app.get("/", (req, res) => {
+  res.send("Backend API is running 🚀");
+});
+
+
 /* ================= Server ================= */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
