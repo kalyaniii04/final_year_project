@@ -10,24 +10,21 @@ import verifyRoutes from "./routes/verify.js";
 dotenv.config();
 
 const app = express();
-// import authRoutes from "./routes/auth.js";
-
-app.use("/auth", authRoutes);
-
-/* ================= CORS (✅ FIXED) ================= */
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "https://final-year-project-khvy.vercel.app" // ✅ FRONTEND URL
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
-  })
-);
 
 /* ================= Middleware ================= */
 app.use(express.json());
+
+/* ================= CORS ================= */
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000", // local dev
+      "https://final-year-project-khvy.vercel.app" // production frontend
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
 /* ================= MongoDB ================= */
 mongoose
