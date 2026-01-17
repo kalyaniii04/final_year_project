@@ -13,7 +13,7 @@ export default function Home() {
       </p>
 
       <div>
-        <button onClick={() => navigate("/issuer-login")}>I am an Issuer</button>
+        <button onClick={() => navigate("/issuer-signup")}>I am an Issuer</button>
         <button onClick={() => navigate("/verify-certificate")}>I am a Verifier</button>
         <button onClick={() => navigate("/student-page")}>I am a Student</button>
 

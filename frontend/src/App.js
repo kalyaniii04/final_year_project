@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import IssuerLogin from "./pages/Issuer/IssuerLogin";
+import IssuerSignup from "./pages/Issuer/Signup";
 import IssuerDashboard from "./pages/Issuer/IssuerDashboard";
 import RegisterInstitute from "./pages/Issuer/RegisterInstitute";
 import IssueCertificate from "./pages/Issuer/IssueCertificate";
@@ -14,6 +15,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/issuer-signup" element={<IssuerSignup/>}/>
       <Route path="/issuer-login" element={<IssuerLogin />} />
       <Route path="/issuer-dashboard" element={<IssuerDashboard />} />
       <Route path="/register-institute" element={<RegisterInstitute />} />

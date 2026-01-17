@@ -4,21 +4,87 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import SibApiV3Sdk from "sib-api-v3-sdk";
 
+import User from "../models/User.js";
 import nonceStore from "../utils/nonceStore.js";
 import otpStore from "../utils/otpStore.js";
 
 const router = express.Router();
 
 /* =====================================================
-   BREVO API CONFIG (NO SMTP)
+   BREVO API CONFIG
 ===================================================== */
 const client = SibApiV3Sdk.ApiClient.instance;
 client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
-
 const emailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
 /* =====================================================
-   1️⃣ REQUEST NONCE (Wallet Login – Step 1)
+   0️⃣ SIGNUP (EMAIL + PASSWORD)
+===================================================== */
+router.post("/signup", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password required" });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "Email already registered" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await User.create({
+      email,
+      password: hashedPassword,
+    });
+
+    res.status(201).json({
+      message: "Signup successful. Please login.",
+    });
+  } catch (err) {
+    console.error("SIGNUP ERROR:", err);
+    res.status(500).json({ error: "Signup failed" });
+  }
+});
+
+/* =====================================================
+   1️⃣ LOGIN WITH EMAIL + PASSWORD
+===================================================== */
+router.post("/login-password", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        error: "Email not registered. Please signup first.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    res.json({
+      message: "Password verified",
+      next: "WALLET_REQUIRED",
+      email,
+    });
+  } catch (err) {
+    console.error("PASSWORD LOGIN ERROR:", err);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+/* =====================================================
+   2️⃣ REQUEST NONCE (WALLET STEP 1)
 ===================================================== */
 router.post("/request-nonce", (req, res) => {
   try {
@@ -46,14 +112,16 @@ router.post("/request-nonce", (req, res) => {
 });
 
 /* =====================================================
-   2️⃣ VERIFY WALLET SIGNATURE
+   3️⃣ VERIFY WALLET SIGNATURE
 ===================================================== */
 router.post("/login", async (req, res) => {
   try {
     const { walletAddress, signature } = req.body;
 
     if (!walletAddress || !signature) {
-      return res.status(400).json({ error: "Missing walletAddress or signature" });
+      return res
+        .status(400)
+        .json({ error: "Missing walletAddress or signature" });
     }
 
     const record = nonceStore[walletAddress];
@@ -86,14 +154,23 @@ router.post("/login", async (req, res) => {
 });
 
 /* =====================================================
-   3️⃣ SEND OTP (BREVO API)
+   4️⃣ SEND OTP (EMAIL MUST EXIST)
 ===================================================== */
 router.post("/send-otp", async (req, res) => {
   try {
     const { walletAddress, email } = req.body;
 
     if (!walletAddress || !email) {
-      return res.status(400).json({ error: "Missing walletAddress or email" });
+      return res
+        .status(400)
+        .json({ error: "Missing walletAddress or email" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(403).json({
+        error: "Email not registered. Please signup first.",
+      });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -122,14 +199,16 @@ router.post("/send-otp", async (req, res) => {
 });
 
 /* =====================================================
-   4️⃣ VERIFY OTP + ISSUE JWT
+   5️⃣ VERIFY OTP + ISSUE JWT
 ===================================================== */
 router.post("/verify-otp", async (req, res) => {
   try {
     const { walletAddress, otp } = req.body;
 
     if (!walletAddress || !otp) {
-      return res.status(400).json({ error: "Missing walletAddress or OTP" });
+      return res
+        .status(400)
+        .json({ error: "Missing walletAddress or OTP" });
     }
 
     const record = otpStore[walletAddress];
@@ -152,6 +231,7 @@ router.post("/verify-otp", async (req, res) => {
     const token = jwt.sign(
       {
         wallet: walletAddress,
+        email: record.email,
         role: "ISSUER",
         mfa: true,
       },

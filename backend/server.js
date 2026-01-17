@@ -10,6 +10,9 @@ import verifyRoutes from "./routes/verify.js";
 dotenv.config();
 
 const app = express();
+import authRoutes from "./routes/auth.js";
+
+app.use("/auth", authRoutes);
 
 /* ================= CORS (✅ FIXED) ================= */
 app.use(

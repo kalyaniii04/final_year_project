@@ -1,96 +1,102 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../api/axios"; // ✅ Axios instance with env baseURL
+import api from "../../api/axios";
 import { connectWallet } from "../../utils/connectWallet";
 
 const IssuerLogin = () => {
-  const [walletAddress, setWalletAddress] = useState("");
+  const navigate = useNavigate();
+
+  const [step, setStep] = useState(1); // 1=email, 2=wallet, 3=otp
   const [email, setEmail] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
-
-  // ==================================
-  // 🔗 Wallet Login (Nonce-based)
-  // ==================================
-  const handleWalletConnect = async () => {
+  /* ==================================
+     1️⃣ EMAIL + PASSWORD LOGIN
+  ================================== */
+  const loginWithPassword = async () => {
     try {
       setLoading(true);
 
-      // 1️⃣ Connect wallet
-      const { signer } = await connectWallet();
-      const address = await signer.getAddress();
-
-      // 2️⃣ Request nonce
-      const nonceRes = await api.post("/auth/request-nonce", {
-        walletAddress: address,
+      await api.post("/auth/login-password", {
+        email,
+        password,
       });
 
-      const nonce = nonceRes.data.nonce;
+      alert("✅ Email & password verified");
+      setStep(2);
 
-      // 3️⃣ Sign nonce
-      const message = `Login nonce: ${nonce}`;
-      const signature = await signer.signMessage(message);
-
-      // 4️⃣ Verify signature
-      await api.post("/auth/login", {
-        walletAddress: address,
-        signature,
-      });
-
-      setWalletAddress(address);
-      alert("✅ Wallet verified. Enter email to receive OTP.");
-
-    } catch (error) {
-      console.error("❌ Wallet authentication failed:", error);
+    } catch (err) {
       alert(
-        error?.response?.data?.error || "Wallet authentication failed"
+        err?.response?.data?.error ||
+        "User not found. Please signup first."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // ==================================
-  // 📧 Send OTP
-  // ==================================
-  const sendOtp = async () => {
+  /* ==================================
+     2️⃣ WALLET AUTH (NONCE)
+  ================================== */
+  const handleWalletConnect = async () => {
     try {
-      if (!email) {
-        alert("Please enter email");
-        return;
-      }
-
       setLoading(true);
 
-      await api.post("/auth/send-otp", {
-        walletAddress,
-        email,
+      const { signer } = await connectWallet();
+      const address = await signer.getAddress();
+
+      const nonceRes = await api.post("/auth/request-nonce", {
+        walletAddress: address,
       });
 
-      setOtpSent(true);
-      alert("📧 OTP sent to your email");
+      const message = `Login nonce: ${nonceRes.data.nonce}`;
+      const signature = await signer.signMessage(message);
 
-    } catch (error) {
-      console.error("❌ OTP send failed:", error);
-      alert(error?.response?.data?.error || "Failed to send OTP");
+      await api.post("/auth/login", {
+        walletAddress: address,
+        signature,
+      });
+
+      setWalletAddress(address);
+      alert("✅ Wallet verified");
+      setStep(3);
+
+    } catch (err) {
+      alert(err?.response?.data?.error || "Wallet verification failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // ==================================
-  // ✅ Verify OTP
-  // ==================================
+  /* ==================================
+     3️⃣ SEND OTP
+  ================================== */
+  const sendOtp = async () => {
+    try {
+      setLoading(true);
+
+      await api.post("/auth/send-otp", {
+        email,
+        walletAddress,
+      });
+
+      alert("📧 OTP sent to registered email");
+
+    } catch (err) {
+      alert(err?.response?.data?.error || "OTP send failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ==================================
+     4️⃣ VERIFY OTP
+  ================================== */
   const verifyOtp = async () => {
     try {
-      if (!otp) {
-        alert("Please enter OTP");
-        return;
-      }
-
       setLoading(true);
 
       const res = await api.post("/auth/verify-otp", {
@@ -98,78 +104,72 @@ const IssuerLogin = () => {
         otp,
       });
 
-      const { token } = res.data;
+      localStorage.setItem("issuerToken", res.data.token);
+      alert("🎉 Login successful");
 
-      // Save JWT
-      localStorage.setItem("issuerToken", token);
-
-      alert("✅ MFA verified successfully");
       navigate("/issuer-dashboard");
 
-    } catch (error) {
-      console.error("❌ OTP verification failed:", error);
-      alert(error?.response?.data?.error || "Invalid or expired OTP");
+    } catch (err) {
+      alert(err?.response?.data?.error || "Invalid OTP");
     } finally {
       setLoading(false);
     }
   };
 
-  // ==================================
-  // 🧱 UI
-  // ==================================
+  /* ==================================
+     🧱 UI
+  ================================== */
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>Issuer Login (MFA)</h1>
+    <div style={{ textAlign: "center", marginTop: 50 }}>
+      <h2>Issuer Login (MFA)</h2>
 
-      {/* Wallet Section */}
-      {!walletAddress ? (
-        <button onClick={handleWalletConnect} disabled={loading}>
-          {loading ? "Connecting..." : "Login with MetaMask"}
-        </button>
-      ) : (
-        <p>
-          ✅ Wallet Connected:{" "}
-          <strong>
-            {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-          </strong>
-        </p>
-      )}
-
-      {/* Email + OTP */}
-      {walletAddress && (
-        <div style={{ marginTop: "20px" }}>
+      {/* STEP 1 */}
+      {step === 1 && (
+        <>
           <input
             type="email"
-            placeholder="Enter registered email"
+            placeholder="Registered Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-
-          <br />
-          <br />
-
-          <button onClick={sendOtp} disabled={loading}>
-            {loading ? "Sending..." : "Send OTP"}
+          <br /><br />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <br /><br />
+          <button onClick={loginWithPassword} disabled={loading}>
+            {loading ? "Verifying..." : "Login"}
           </button>
+        </>
+      )}
 
-          {otpSent && (
-            <div style={{ marginTop: "15px" }}>
-              <input
-                type="text"
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-              />
+      {/* STEP 2 */}
+      {step === 2 && (
+        <button onClick={handleWalletConnect} disabled={loading}>
+          {loading ? "Connecting..." : "Connect MetaMask"}
+        </button>
+      )}
 
-              <br />
-              <br />
-
-              <button onClick={verifyOtp} disabled={loading}>
-                {loading ? "Verifying..." : "Verify OTP"}
-              </button>
-            </div>
-          )}
-        </div>
+      {/* STEP 3 */}
+      {step === 3 && (
+        <>
+          <button onClick={sendOtp} disabled={loading}>
+            Send OTP
+          </button>
+          <br /><br />
+          <input
+            placeholder="Enter OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+          />
+          <br /><br />
+          <button onClick={verifyOtp} disabled={loading}>
+            Verify OTP
+          </button>
+        </>
       )}
     </div>
   );
