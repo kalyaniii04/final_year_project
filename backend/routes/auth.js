@@ -157,6 +157,7 @@ router.post("/login", async (req, res) => {
    4️⃣ SEND OTP (EMAIL MUST EXIST)
 ===================================================== */
 router.post("/send-otp", async (req, res) => {
+  console.log("SEND OTP HIT:", req.body);
   try {
     const { walletAddress, email } = req.body;
 
@@ -168,22 +169,33 @@ router.post("/send-otp", async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(403).json({
-        error: "Email not registered. Please signup first.",
-      });
+      return res
+        .status(403)
+        .json({ error: "Email not registered. Please signup first." });
     }
 
+    // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // Store OTP hash in memory
     otpStore[walletAddress] = {
       hash: await bcrypt.hash(otp, 10),
-      expiresAt: Date.now() + 5 * 60 * 1000,
+      expiresAt: Date.now() + 5 * 60 * 1000, // valid 5 minutes
       email,
     };
 
+    // Check BREVO API key
+    if (!process.env.BREVO_API_KEY) {
+      console.error("BREVO_API_KEY is missing!");
+      return res
+        .status(500)
+        .json({ error: "Email service not configured" });
+    }
+
+    // Send email via Brevo SDK
     await emailApi.sendTransacEmail({
       sender: {
-        email: "abc833904@gmail.com",
+        email: "kalyanibj1@gmail.com",
         name: "Cert Issuer MFA",
       },
       to: [{ email }],
@@ -191,9 +203,11 @@ router.post("/send-otp", async (req, res) => {
       textContent: `Your OTP is ${otp}. It is valid for 5 minutes.`,
     });
 
+    console.log(`OTP sent to ${email}: ${otp}`);
+
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
-    console.error("SEND OTP ERROR:", err);
+    console.error("SEND OTP ERROR:", err.response?.body || err);
     res.status(500).json({ error: "Failed to send OTP" });
   }
 });
