@@ -18,7 +18,7 @@ client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
 const emailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
 /* =====================================================
-   0️⃣ SIGNUP (EMAIL + PASSWORD) — ISSUER
+   0️⃣ SIGNUP (EMAIL + PASSWORD)
 ===================================================== */
 router.post("/signup", async (req, res) => {
   try {
@@ -37,7 +37,9 @@ router.post("/signup", async (req, res) => {
 
     await User.create({ email, password: hashedPassword });
 
-    res.status(201).json({ message: "Signup successful. Please login." });
+    res.status(201).json({
+      message: "Signup successful. Please login.",
+    });
   } catch (err) {
     console.error("SIGNUP ERROR:", err);
     res.status(500).json({ error: "Signup failed" });
@@ -45,15 +47,21 @@ router.post("/signup", async (req, res) => {
 });
 
 /* =====================================================
-   1️⃣ LOGIN WITH EMAIL + PASSWORD — ISSUER
+   1️⃣ LOGIN WITH EMAIL + PASSWORD
 ===================================================== */
 router.post("/login-password", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password required" });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ error: "Email not registered" });
+      return res.status(404).json({
+        error: "Email not registered. Please signup first.",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -73,7 +81,7 @@ router.post("/login-password", async (req, res) => {
 });
 
 /* =====================================================
-   2️⃣ REQUEST NONCE — ISSUER & VERIFIER
+   2️⃣ REQUEST NONCE (RAW NONCE ONLY)
 ===================================================== */
 router.post("/request-nonce", (req, res) => {
   try {
@@ -83,11 +91,10 @@ router.post("/request-nonce", (req, res) => {
       return res.status(400).json({ error: "Invalid wallet address" });
     }
 
-    const nonce = `Login nonce: ${Math.floor(
-      100000 + Math.random() * 900000
-    )}`;
+    const key = walletAddress.toLowerCase();
+    const nonce = Math.floor(100000 + Math.random() * 900000).toString();
 
-    nonceStore[walletAddress.toLowerCase()] = {
+    nonceStore[key] = {
       nonce,
       expiresAt: Date.now() + 5 * 60 * 1000,
     };
@@ -100,28 +107,38 @@ router.post("/request-nonce", (req, res) => {
 });
 
 /* =====================================================
-   3️⃣ VERIFY WALLET — ISSUER (CONTINUES MFA)
+   3️⃣ VERIFY WALLET SIGNATURE
 ===================================================== */
 router.post("/login", async (req, res) => {
   try {
     const { walletAddress, signature } = req.body;
 
-    const record = nonceStore[walletAddress?.toLowerCase()];
+    if (!walletAddress || !signature) {
+      return res
+        .status(400)
+        .json({ error: "Missing walletAddress or signature" });
+    }
+
+    const key = walletAddress.toLowerCase();
+    const record = nonceStore[key];
+
     if (!record) {
       return res.status(401).json({ error: "Nonce not found" });
     }
 
     if (Date.now() > record.expiresAt) {
-      delete nonceStore[walletAddress.toLowerCase()];
+      delete nonceStore[key];
       return res.status(401).json({ error: "Nonce expired" });
     }
 
-    const recovered = ethers.verifyMessage(record.nonce, signature);
-    if (recovered.toLowerCase() !== walletAddress.toLowerCase()) {
+    const message = `Login nonce: ${record.nonce}`;
+    const recovered = ethers.verifyMessage(message, signature);
+
+    if (recovered.toLowerCase() !== key) {
       return res.status(401).json({ error: "Invalid wallet signature" });
     }
 
-    delete nonceStore[walletAddress.toLowerCase()];
+    delete nonceStore[key];
 
     res.json({
       message: "Wallet verified",
@@ -134,27 +151,39 @@ router.post("/login", async (req, res) => {
 });
 
 /* =====================================================
-   4️⃣ SEND OTP — ISSUER ONLY
+   4️⃣ SEND OTP
 ===================================================== */
 router.post("/send-otp", async (req, res) => {
   try {
     const { walletAddress, email } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(403).json({ error: "Email not registered" });
+    if (!walletAddress || !email) {
+      return res
+        .status(400)
+        .json({ error: "Missing walletAddress or email" });
     }
 
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(403)
+        .json({ error: "Email not registered. Please signup first." });
+    }
+
+    const key = walletAddress.toLowerCase();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    otpStore[walletAddress.toLowerCase()] = {
+    otpStore[key] = {
       hash: await bcrypt.hash(otp, 10),
       expiresAt: Date.now() + 5 * 60 * 1000,
       email,
     };
 
     await emailApi.sendTransacEmail({
-      sender: { email: "kalyanibj1@gmail.com", name: "Cert Issuer MFA" },
+      sender: {
+        email: "kalyanibj1@gmail.com",
+        name: "Cert Issuer MFA",
+      },
       to: [{ email }],
       subject: "Issuer MFA OTP",
       textContent: `Your OTP is ${otp}. Valid for 5 minutes.`,
@@ -162,25 +191,33 @@ router.post("/send-otp", async (req, res) => {
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
-    console.error("SEND OTP ERROR:", err);
+    console.error("SEND OTP ERROR:", err.response?.body || err);
     res.status(500).json({ error: "Failed to send OTP" });
   }
 });
 
 /* =====================================================
-   5️⃣ VERIFY OTP + JWT — ISSUER
+   5️⃣ VERIFY OTP + ISSUE JWT
 ===================================================== */
 router.post("/verify-otp", async (req, res) => {
   try {
     const { walletAddress, otp } = req.body;
 
-    const record = otpStore[walletAddress?.toLowerCase()];
+    if (!walletAddress || !otp) {
+      return res
+        .status(400)
+        .json({ error: "Missing walletAddress or OTP" });
+    }
+
+    const key = walletAddress.toLowerCase();
+    const record = otpStore[key];
+
     if (!record) {
       return res.status(401).json({ error: "OTP not found" });
     }
 
     if (Date.now() > record.expiresAt) {
-      delete otpStore[walletAddress.toLowerCase()];
+      delete otpStore[key];
       return res.status(401).json({ error: "OTP expired" });
     }
 
@@ -189,7 +226,7 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(401).json({ error: "Invalid OTP" });
     }
 
-    delete otpStore[walletAddress.toLowerCase()];
+    delete otpStore[key];
 
     const token = jwt.sign(
       {
@@ -202,53 +239,13 @@ router.post("/verify-otp", async (req, res) => {
       { expiresIn: "15m" }
     );
 
-    res.json({ message: "Issuer authenticated", token });
-  } catch (err) {
-    console.error("VERIFY OTP ERROR:", err);
-    res.status(500).json({ error: "OTP verification failed" });
-  }
-});
-
-/* =====================================================
-   ⭐ 6️⃣ VERIFIER LOGIN (SIMPLE WALLET AUTH)
-===================================================== */
-router.post("/verifier-login", async (req, res) => {
-  try {
-    const { walletAddress, signature } = req.body;
-
-    const record = nonceStore[walletAddress?.toLowerCase()];
-    if (!record) {
-      return res.status(401).json({ error: "Nonce not found" });
-    }
-
-    if (Date.now() > record.expiresAt) {
-      delete nonceStore[walletAddress.toLowerCase()];
-      return res.status(401).json({ error: "Nonce expired" });
-    }
-
-    const recovered = ethers.verifyMessage(record.nonce, signature);
-    if (recovered.toLowerCase() !== walletAddress.toLowerCase()) {
-      return res.status(401).json({ error: "Invalid signature" });
-    }
-
-    delete nonceStore[walletAddress.toLowerCase()];
-
-    const token = jwt.sign(
-      {
-        wallet: walletAddress,
-        role: "VERIFIER",
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
     res.json({
-      message: "Verifier authenticated",
+      message: "Issuer authenticated",
       token,
     });
   } catch (err) {
-    console.error("VERIFIER LOGIN ERROR:", err);
-    res.status(500).json({ error: "Verifier login failed" });
+    console.error("VERIFY OTP ERROR:", err);
+    res.status(500).json({ error: "OTP verification failed" });
   }
 });
 
