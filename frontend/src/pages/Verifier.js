@@ -8,22 +8,30 @@ import {
   Typography,
   Divider,
 } from "@mui/material";
-import { connectWallet } from "../utils/connectWallet"; // adjust if path differs
+import { connectWallet } from "../utils/connectWallet";
 
 /**
  * VerifyCertificate Component
  * ----------------------------
- * Allows users to verify certificates stored on the blockchain
- * by entering a Certificate ID and file hash.
+ * Verifies blockchain-issued certificates using
+ * Certificate ID + PDF SHA-256 hash
  */
 export default function VerifyCertificate() {
-  // -------------------- State --------------------
   const [certId, setCertId] = useState("");
   const [fileHash, setFileHash] = useState("");
   const [status, setStatus] = useState("");
   const [certDetails, setCertDetails] = useState(null);
 
-  // -------------------- Handlers --------------------
+  // ✅ Normalize SHA-256 hash (prevents 0x0x bug)
+  const normalizeHash = (hash) => {
+    if (!hash) return "";
+    let clean = hash.trim().toLowerCase();
+    if (clean.startsWith("0x")) {
+      clean = clean.slice(2);
+    }
+    return "0x" + clean;
+  };
+
   const handleVerify = async () => {
     if (!certId || !fileHash) {
       alert("Please fill both fields before verifying!");
@@ -36,39 +44,47 @@ export default function VerifyCertificate() {
 
       const { contract } = await connectWallet();
 
-      const certIdBytes = ethers.id(certId);
-      const fileHashBytes = "0x" + fileHash;
+      // MUST match IssueCertificate hashing logic
+      const certIdBytes = ethers.id(certId.trim());
+      const fileHashBytes = normalizeHash(fileHash);
 
-      // Fetch on-chain certificate data
+      // Fetch certificate data
       const cert = await contract.getCertificate(certIdBytes);
 
-      // Verify validity
+      // Certificate existence check
+      if (cert.issuer === ethers.ZeroAddress) {
+        setStatus("❌ Certificate does NOT exist on blockchain");
+        return;
+      }
+
+      // Verify hash + revocation status
       const isValid = await contract.verifyCertificate(
         certIdBytes,
         fileHashBytes
       );
 
-      if (isValid) {
-        setStatus("✅ Certificate is VALID and not revoked!");
-        setCertDetails({
-          fileHash: cert.fileHash,
-          student: cert.student,
-          issuer: cert.issuer,
-          issuedAt: new Date(Number(cert.issuedAt) * 1000).toLocaleString(),
-          revoked: cert.revoked,
-          revokedAt:
-            cert.revokedAt > 0
-              ? new Date(Number(cert.revokedAt) * 1000).toLocaleString()
-              : "Not revoked",
-          instituteName: cert.instituteName,
-          instituteId: cert.instituteId,
-          studentName: cert.studentName,
-          courseName: cert.courseName,
-        });
-      } else {
+      if (!isValid) {
         setStatus("❌ Certificate is INVALID or REVOKED!");
-        setCertDetails(null);
+        return;
       }
+
+      // Certificate is valid
+      setStatus("✅ Certificate is VALID and not revoked!");
+      setCertDetails({
+        studentName: cert.studentName,
+        courseName: cert.courseName,
+        instituteName: cert.instituteName,
+        instituteId: cert.instituteId,
+        student: cert.student,
+        issuer: cert.issuer,
+        issuedAt: new Date(Number(cert.issuedAt) * 1000).toLocaleString(),
+        revoked: cert.revoked,
+        revokedAt:
+          cert.revokedAt > 0
+            ? new Date(Number(cert.revokedAt) * 1000).toLocaleString()
+            : "Not revoked",
+        fileHash: cert.fileHash,
+      });
     } catch (error) {
       console.error("Verification error:", error);
       setStatus("❌ " + (error.reason || error.message));
@@ -76,7 +92,6 @@ export default function VerifyCertificate() {
     }
   };
 
-  // -------------------- Render --------------------
   return (
     <div style={{ padding: "40px", maxWidth: "700px", margin: "auto" }}>
       <Typography variant="h4" gutterBottom>
@@ -89,40 +104,32 @@ export default function VerifyCertificate() {
             Enter the Certificate ID and file hash to check authenticity.
           </Typography>
 
-          {/* Certificate ID Input */}
           <TextField
             fullWidth
-            label="Certificate ID (text)"
+            label="Certificate ID"
             value={certId}
             onChange={(e) => setCertId(e.target.value)}
-            variant="outlined"
             sx={{ mb: 2 }}
           />
 
-          {/* File Hash Input */}
           <TextField
             fullWidth
             label="File Hash (SHA-256)"
             value={fileHash}
             onChange={(e) => setFileHash(e.target.value)}
-            variant="outlined"
             sx={{ mb: 3 }}
           />
 
-          {/* Verify Button */}
           <Button
             variant="contained"
-            color="primary"
             onClick={handleVerify}
             disabled={!certId || !fileHash}
           >
             Verify Certificate
           </Button>
 
-          {/* Status Message */}
           {status && (
             <Typography
-              variant="body1"
               sx={{ mt: 3 }}
               color={status.includes("✅") ? "green" : "red"}
             >
@@ -130,13 +137,12 @@ export default function VerifyCertificate() {
             </Typography>
           )}
 
-          {/* Certificate Details */}
           {certDetails && (
             <>
               <Divider sx={{ my: 3 }} />
               <Typography variant="h6">📄 Certificate Details</Typography>
 
-              <Typography sx={{ mt: 1 }}>
+              <Typography>
                 <strong>Student Name:</strong> {certDetails.studentName}
               </Typography>
               <Typography>

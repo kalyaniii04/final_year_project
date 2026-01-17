@@ -1,9 +1,44 @@
 import express from "express";
 import { ethers } from "ethers";
 import fs from "fs";
+import jwt from "jsonwebtoken";
 import { CONTRACT_ADDRESS } from "../config/contract.js";
 
 const router = express.Router();
+
+/* =====================================================
+   🔐 VERIFIER AUTH MIDDLEWARE
+===================================================== */
+const verifyVerifier = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({
+      verified: false,
+      message: "Authorization token missing"
+    });
+  }
+
+  try {
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (decoded.role !== "VERIFIER") {
+      return res.status(403).json({
+        verified: false,
+        message: "Access denied: verifier only"
+      });
+    }
+
+    req.verifierWallet = decoded.wallet;
+    next();
+  } catch (err) {
+    return res.status(401).json({
+      verified: false,
+      message: "Invalid or expired token"
+    });
+  }
+};
 
 /* ================= ABI ================= */
 const abiJson = JSON.parse(
@@ -23,9 +58,9 @@ const provider = new ethers.JsonRpcProvider(
 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
 
 /* =====================================================
-   VERIFY CERTIFICATE (STATUS ONLY)
+   🔍 VERIFY CERTIFICATE (VERIFIER ONLY)
 ===================================================== */
-router.get("/:certificateId", async (req, res) => {
+router.get("/:certificateId", verifyVerifier, async (req, res) => {
   try {
     const certificateId = req.params.certificateId?.trim();
 
@@ -55,11 +90,14 @@ router.get("/:certificateId", async (req, res) => {
       revoked: cert.revoked,
       issuedAt: Number(cert.issuedAt),
 
-      // Student + Institute info
+      // Certificate details
       studentName: cert.studentName,
       courseName: cert.courseName,
       instituteName: cert.instituteName,
-      instituteId: cert.instituteId
+      instituteId: cert.instituteId,
+
+      // Audit info (optional, good for exams)
+      verifiedBy: req.verifierWallet
     });
 
   } catch (err) {
@@ -71,9 +109,5 @@ router.get("/:certificateId", async (req, res) => {
     });
   }
 });
-
-// console.log("Cert ID:", certificateId);
-// console.log("Bytes32:", certIdBytes);
-
 
 export default router;

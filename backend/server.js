@@ -37,8 +37,9 @@ mongoose
 
 /* ================= API Routes ================= */
 app.use("/auth", authRoutes);
-app.use("/certificates", certificateRoutes);
 app.use("/verify", verifyRoutes);
+app.use("/certificates", certificateRoutes);
+// app.use("/verify", verifyRoutes);
 
 /* ================= Health Check ================= */
 app.get("/", (req, res) => {
