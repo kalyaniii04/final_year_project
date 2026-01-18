@@ -58,9 +58,9 @@ const provider = new ethers.JsonRpcProvider(
 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
 
 /* =====================================================
-   🔍 VERIFY CERTIFICATE (VERIFIER ONLY)
+   🔍 VERIFY CERTIFICATE (PUBLIC)
 ===================================================== */
-router.get("/:certificateId", verifyVerifier, async (req, res) => {
+router.get("/:certificateId", async (req, res) => {
   try {
     const certificateId = req.params.certificateId?.trim();
 
@@ -94,10 +94,7 @@ router.get("/:certificateId", verifyVerifier, async (req, res) => {
       studentName: cert.studentName,
       courseName: cert.courseName,
       instituteName: cert.instituteName,
-      instituteId: cert.instituteId,
-
-      // Audit info (optional, good for exams)
-      verifiedBy: req.verifierWallet
+      instituteId: cert.instituteId
     });
 
   } catch (err) {
