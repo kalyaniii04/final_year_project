@@ -7,6 +7,7 @@ import SibApiV3Sdk from "sib-api-v3-sdk";
 import User from "../models/User.js";
 import nonceStore from "../utils/nonceStore.js";
 import otpStore from "../utils/otpStore.js";
+import { getWalletNonce, verifyWalletSignature } from "../controller/auth.controller.js";
 
 const router = express.Router();
 
@@ -248,5 +249,19 @@ router.post("/verify-otp", async (req, res) => {
     res.status(500).json({ error: "OTP verification failed" });
   }
 });
+
+/* =====================================================
+   VERIFIER AUTHENTICATION ROUTES
+===================================================== */
+
+/* =====================================================
+   6️⃣ VERIFIER: GET WALLET NONCE
+===================================================== */
+router.post("/verifier/nonce", getWalletNonce);
+
+/* =====================================================
+   7️⃣ VERIFIER: VERIFY WALLET SIGNATURE + ISSUE JWT
+===================================================== */
+router.post("/verifier/login", verifyWalletSignature);
 
 export default router;

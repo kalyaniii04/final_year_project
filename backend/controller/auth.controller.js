@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 import User from "../models/User.js";
 import { sendOTP } from "../utils/sendOtp.js";
 import nonceStore from "../utils/nonceStore.js";
+import otpStore from "../utils/otpStore.js";
 
 /* =====================================================
    EMAIL + PASSWORD AUTH (ISSUER / USER)
@@ -15,6 +16,10 @@ import nonceStore from "../utils/nonceStore.js";
 export const signup = async (req, res) => {
   try {
     const { email, password, confirmPassword } = req.body;
+
+    if (!email || !password || !confirmPassword) {
+      return res.status(400).json({ message: "All fields required" });
+    }
 
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
@@ -29,7 +34,8 @@ export const signup = async (req, res) => {
 
     await User.create({
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      role: "ISSUER"
     });
 
     res.status(201).json({ message: "Signup successful" });
@@ -38,10 +44,14 @@ export const signup = async (req, res) => {
   }
 };
 
-// ================= LOGIN =================
+// ================= LOGIN (SEND OTP) =================
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email & password required" });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -63,8 +73,45 @@ export const login = async (req, res) => {
   }
 };
 
+// ================= VERIFY OTP =================
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email & OTP required" });
+    }
+
+    const storedOtp = otpStore.get(email);
+    if (!storedOtp || storedOtp !== otp) {
+      return res.status(401).json({ message: "Invalid or expired OTP" });
+    }
+
+    otpStore.delete(email);
+
+    const user = await User.findOne({ email });
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.json({
+      message: "Login successful",
+      token
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 /* =====================================================
-   WALLET SIGNATURE AUTH (VERIFIER) — OPTION A
+   WALLET SIGNATURE AUTH (VERIFIER)
 ===================================================== */
 
 // ================= GET NONCE =================
@@ -89,7 +136,7 @@ export const getWalletNonce = (req, res) => {
 };
 
 // ================= VERIFY SIGNATURE =================
-export const verifyWalletSignature = (req, res) => {
+export const verifyWalletSignature = async (req, res) => {
   try {
     const { walletAddress, signature } = req.body;
 

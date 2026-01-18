@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ethers } from "ethers";
 import CertificateRegistry from "../CertificateRegistry.json";
 
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const CONTRACT_ADDRESS = "0x831f4a70ca4eeB41b85562e3fD69abe5d96328f0";
 const IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
 
 export default function Student() {

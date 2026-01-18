@@ -11,15 +11,19 @@ dotenv.config();
 
 const app = express();
 
+/* ================= Trust Proxy ================= */
+app.set("trust proxy", 1);
+
 /* ================= Middleware ================= */
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 /* ================= CORS ================= */
 app.use(
   cors({
     origin: [
-      "http://localhost:3000", // local dev
-      "https://final-year-project-khvy.vercel.app" // production frontend
+      "http://localhost:3000",
+      "https://final-year-project-khvy.vercel.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
@@ -39,11 +43,16 @@ mongoose
 app.use("/auth", authRoutes);
 app.use("/verify", verifyRoutes);
 app.use("/certificates", certificateRoutes);
-// app.use("/verify", verifyRoutes);
 
 /* ================= Health Check ================= */
 app.get("/", (req, res) => {
   res.send("🚀 Backend API is running");
+});
+
+/* ================= Global Error Handler ================= */
+app.use((err, req, res, next) => {
+  console.error("🔥 Error:", err.stack);
+  res.status(500).json({ message: "Internal Server Error" });
 });
 
 /* ================= Server ================= */
