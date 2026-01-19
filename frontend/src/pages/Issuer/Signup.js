@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
+import "./Signup.css";
 
 const IssuerSignup = () => {
   const navigate = useNavigate();
@@ -10,9 +11,6 @@ const IssuerSignup = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  /* ==================================
-     SIGNUP HANDLER
-  ================================== */
   const handleSignup = async () => {
     if (!email || !password || !confirmPassword) {
       alert("All fields are required");
@@ -32,68 +30,65 @@ const IssuerSignup = () => {
     try {
       setLoading(true);
 
-      await api.post("/auth/signup", {
-        email,
-        password,
-      });
+      await api.post("/auth/signup", { email, password });
 
       alert("✅ Signup successful. Please login.");
       navigate("/issuer-login");
 
     } catch (err) {
-      alert(
-        err?.response?.data?.error ||
-        "Signup failed. Email may already exist."
-      );
+      alert(err?.response?.data?.error || "Signup failed");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ==================================
-     UI
-  ================================== */
   return (
-    <div style={{ textAlign: "center", marginTop: 50 }}>
-      <h2>Issuer Signup</h2>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2 className="auth-title">Issuer Signup</h2>
+        <p className="auth-subtitle">
+          Register to issue blockchain-verified certificates
+        </p>
 
-      <input
-        type="email"
-        placeholder="Official Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <br /><br />
+        <input
+          type="email"
+          placeholder="Official Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="auth-input"
+        />
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <br /><br />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="auth-input"
+        />
 
-      <input
-        type="password"
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-      />
-      <br /><br />
+        <input
+          type="password"
+          placeholder="Confirm Password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="auth-input"
+        />
 
-      <button onClick={handleSignup} disabled={loading}>
-        {loading ? "Creating account..." : "Signup"}
-      </button>
-
-      <p style={{ marginTop: 15 }}>
-        Already registered?{" "}
-        <span
-          style={{ color: "blue", cursor: "pointer" }}
-          onClick={() => navigate("/issuer-login")}
+        <button
+          onClick={handleSignup}
+          disabled={loading}
+          className="auth-button"
         >
-          Login
-        </span>
-      </p>
+          {loading ? "Creating Account..." : "Signup"}
+        </button>
+
+        <p className="auth-footer">
+          Already registered?{" "}
+          <span onClick={() => navigate("/issuer-login")}>
+            Login
+          </span>
+        </p>
+      </div>
     </div>
   );
 };

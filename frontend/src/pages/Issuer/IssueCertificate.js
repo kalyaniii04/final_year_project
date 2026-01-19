@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 
 import CertificateRegistry from "../../CertificateRegistry.json";
 import { CONTRACT_ADDRESS } from "../../contractConfig";
+import "./IssueCertificate.css";
 
 const FRONTEND_URL = "https://final-year-project-khvy.vercel.app";
 
@@ -75,7 +76,6 @@ const IssueCertificate = () => {
     const width = pdf.internal.pageSize.getWidth();
     const height = pdf.internal.pageSize.getHeight();
 
-    // Border
     pdf.setLineWidth(2);
     pdf.rect(40, 40, width - 80, height - 80);
 
@@ -89,9 +89,7 @@ const IssueCertificate = () => {
 
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(16);
-    pdf.text("has successfully completed the course", width / 2, 250, {
-      align: "center",
-    });
+    pdf.text("has successfully completed the course", width / 2, 250, { align: "center" });
 
     pdf.setFont("times", "italic");
     pdf.setFontSize(20);
@@ -103,12 +101,10 @@ const IssueCertificate = () => {
     pdf.text("Wallet Address:", 80, 380);
     pdf.text(studentAddress, 80, 400, { maxWidth: width - 160 });
 
-    // QR
     const verifyURL = `${FRONTEND_URL}/verify/${certificateId}`;
     const qr = await QRCode.toDataURL(verifyURL);
     pdf.addImage(qr, "PNG", width / 2 - 70, height - 250, 140, 140);
 
-    // Hash
     const blob = pdf.output("blob");
     const buffer = await blob.arrayBuffer();
     const hash = await computeSHA256(buffer);
@@ -118,9 +114,7 @@ const IssueCertificate = () => {
     pdf.text("Certificate Hash (SHA-256):", 80, height - 100);
     pdf.text(hash, 80, height - 80, { maxWidth: width - 160 });
 
-    const finalBlob = pdf.output("blob");
-
-    setPdfBlob(finalBlob);
+    setPdfBlob(pdf.output("blob"));
     setFileHash(hash);
 
     alert("PDF Generated");
@@ -179,63 +173,43 @@ const IssueCertificate = () => {
       UI
   =============================== */
   return (
-    <div style={{ maxWidth: 600, margin: "auto", padding: 20 }}>
-      <h2>🎓 Issue Certificate</h2>
+    <div className="issue-page">
+      <div className="issue-container">
+        <h1 className="issue-title">🎓 Issue Certificate</h1>
 
-      <button onClick={connectWallet}>🔗 Connect Wallet</button>
-      {account && <p>{account}</p>}
+        <button className="primary-btn" onClick={connectWallet}>🔗 Connect Wallet</button>
+        {account && <p className="wallet-address">{account}</p>}
 
-      <br/>
-      <hr />
-      <br />
-      <br/>
-      <input placeholder="Student Name" onChange={(e) => setStudentName(e.target.value)} />
-      <br />
-      <br />
-      <input placeholder="Certificate ID" onChange={(e) => setCertificateId(e.target.value)} />
-      <br />
-      <br />
-      <input placeholder="Student Wallet" onChange={(e) => setStudentAddress(e.target.value)} />
-      <br />
-      <br />
-      <input placeholder="Course Name" onChange={(e) => setCourse(e.target.value)} />
-      <br />
-      <br />
-      <input type="date" onChange={(e) => setIssueDate(e.target.value)} />
-      <br />
-      <br />
-      
+        <div className="form-group">
+          <input placeholder="Student Name" onChange={(e) => setStudentName(e.target.value)} />
+          <input placeholder="Certificate ID" onChange={(e) => setCertificateId(e.target.value)} />
+          <input placeholder="Student Wallet" onChange={(e) => setStudentAddress(e.target.value)} />
+          <input placeholder="Course Name" onChange={(e) => setCourse(e.target.value)} />
+          <input type="date" onChange={(e) => setIssueDate(e.target.value)} />
+        </div>
 
-      <button onClick={generatePDF}>📄 Generate Certificate</button>
-      <br />
-      <br />
+        <button className="primary-btn" onClick={generatePDF}>📄 Generate Certificate</button>
 
-      {pdfBlob && (
-        <>
-          <p><strong>Hash:</strong> {fileHash}</p>
-          <button
-            onClick={() => {
+        {pdfBlob && (
+          <div className="download-section">
+            <p><strong>Hash:</strong> {fileHash}</p>
+            <button className="secondary-btn" onClick={() => {
               const url = URL.createObjectURL(pdfBlob);
               const a = document.createElement("a");
               a.href = url;
               a.download = `${certificateId}.pdf`;
               a.click();
               URL.revokeObjectURL(url);
-            }}
-          >
-            ⬇️ Download Certificate
-          </button>
-        </>
-      )}
+            }}>⬇️ Download Certificate</button>
+          </div>
+        )}
+        <br />
+        <br />
 
-      <br />
-      <br />
-      
-      <button disabled={loading} onClick={uploadToBlockchain}>
-        🚀 Upload to Blockchain
-      </button>
+        <button className="primary-btn" disabled={loading} onClick={uploadToBlockchain}>🚀 Upload to Blockchain</button>
 
-      <p>{status}</p>
+        <p className="status-text">{status}</p>
+      </div>
     </div>
   );
 };

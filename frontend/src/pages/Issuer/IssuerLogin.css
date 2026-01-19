@@ -1,0 +1,86 @@
+/* =====================
+   PAGE CONTAINER
+===================== */
+.auth-container {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #141a2e, #0b0f1a);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: "Inter", sans-serif;
+    color: #e5e7eb;
+}
+
+/* =====================
+   CARD
+===================== */
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(124, 124, 255, 0.2);
+    border-radius: 18px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+}
+
+/* =====================
+   TEXT
+===================== */
+.auth-title {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.auth-subtitle {
+    font-size: 0.95rem;
+    color: #9ca3af;
+    margin-bottom: 30px;
+}
+
+/* =====================
+   INPUTS
+===================== */
+.auth-card input {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(124, 124, 255, 0.3);
+    background: rgba(0, 0, 0, 0.3);
+    color: #e5e7eb;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.auth-card input::placeholder {
+    color: #9ca3af;
+}
+
+/* =====================
+   BUTTONS
+===================== */
+.auth-card button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    background: linear-gradient(135deg, #7c7cff, #22d3ee);
+    color: #0b0f1a;
+    transition: all 0.3s ease;
+}
+
+.auth-card button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(124, 124, 255, 0.5);
+}
+
+.auth-card button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

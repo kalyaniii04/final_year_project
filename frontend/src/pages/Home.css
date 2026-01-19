@@ -1,109 +1,218 @@
-/* --- Professional Full-Page Layout (Well-Aligned) --- */
-body {
-    margin: 0;
-    font-family: "Inter", "Poppins", sans-serif;
-    background-color: #f9fafb;
-    color: #1e293b;
+/* =====================
+   GLOBAL CONTAINER
+===================== */
+.home-container {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #141a2e, #0b0f1a);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    color: #e5e7eb;
+    font-family: "Poppins", sans-serif;
+    padding: 40px 20px;
+}
+
+/* =====================
+   HERO SECTION
+===================== */
+.hero {
+    max-width: 900px;
+    text-align: center;
+    margin-top: 80px;
+}
+
+.hero-title {
+    font-size: 3rem;
+    font-weight: 600;
+    line-height: 1.1;
+    text-align: center;
+    color: #e5e7eb;
+    /* Base text color */
+}
+
+.hero-title span {
+    background: linear-gradient(90deg, #7c7cff, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.hero-subtitle {
+    font-size: 1.5rem;
+    text-align: center;
+    color: #9ca3af;
+    margin: 0 auto 50px;
+    /* ⬅ centers the element */
+    max-width: 700px;
+    /* ⬅ optional but recommended */
     line-height: 1.6;
 }
-
-/* Page layout wrapper */
-.home-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-/* Header */
-header {
-    background-color: #1e293b;
-    color: #ffffff;
-    padding: 1.2rem 3rem;
-    font-size: 1.3rem;
-    font-weight: 600;
-    text-align: left;
-}
-
-/* Main content centered vertically */
-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 2rem;
-    text-align: center;
-}
-
-/* Headline */
-h1 {
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 1rem;
-}
-
-/* Subheading / tagline */
-.subtitle {
-    font-size: 1.15rem;
-    color: #475569;
-    max-width: 700px;
-    margin: 0 auto 2.5rem auto;
-}
-
-/* Button group styling */
+/* =====================
+   BUTTONS
+===================== */
 .button-group {
     display: flex;
-    flex-wrap: wrap;
+    gap: 20px;
     justify-content: center;
-    gap: 1rem;
+    flex-wrap: wrap;
 }
 
-button {
-    background-color: #2563eb;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 0.9rem 2rem;
+.primary-btn,
+.secondary-btn {
+    padding: 14px 28px;
     font-size: 1rem;
-    font-weight: 500;
+    border-radius: 12px;
     cursor: pointer;
-    transition: background-color 0.25s ease, transform 0.15s ease;
+    transition: all 0.3s ease;
+    min-width: 180px;
 }
 
-button:hover {
-    background-color: #1d4ed8;
+/* Primary Button */
+.primary-btn {
+    background: linear-gradient(135deg, #7c7cff, #22d3ee);
+    color: #0b0f1a;
+    font-weight: 600;
+    border: none;
+    box-shadow: 0 0 20px rgba(124, 124, 255, 0.35);
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(124, 124, 255, 0.6);
+}
+
+/* Secondary Button */
+.secondary-btn {
+    background: transparent;
+    color: #e5e7eb;
+    border: 1px solid rgba(124, 124, 255, 0.5);
+}
+
+.secondary-btn:hover {
+    background: rgba(124, 124, 255, 0.1);
     transform: translateY(-2px);
 }
 
-/* Footer */
-footer {
+/* =====================
+   FOOTER
+===================== */
+.footer {
+    margin-top: 80px;
     text-align: center;
-    background-color: #f1f5f9;
-    color: #64748b;
-    padding: 1rem 0;
     font-size: 0.9rem;
-    border-top: 1px solid #e2e8f0;
+    color: #9ca3af;
 }
 
-/* --- Responsive adjustments --- */
-@media (max-width: 600px) {
-    header {
-        padding: 1rem;
-        font-size: 1.1rem;
-        text-align: center;
+.footer-muted {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+/* =====================
+   RESPONSIVE
+===================== */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.2rem;
     }
 
-    h1 {
-        font-size: 1.8rem;
-    }
-
-    .subtitle {
+    .hero-subtitle {
         font-size: 1rem;
-        margin-bottom: 2rem;
+    }
+}
+
+/* =====================
+   SECTIONS
+===================== */
+.section {
+    width: 100%;
+    max-width: 1100px;
+    margin: 100px auto 0;
+    text-align: center;
+    padding: 0 20px;
+}
+
+.section-title {
+    font-size: 2.2rem;
+    margin-bottom: 50px;
+    background: linear-gradient(90deg, #7c7cff, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* =====================
+   CARDS
+===================== */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
+}
+
+.info-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(124, 124, 255, 0.2);
+    border-radius: 16px;
+    padding: 30px;
+    transition: all 0.3s ease;
+}
+
+.info-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 0 30px rgba(124, 124, 255, 0.25);
+}
+
+.info-card h3 {
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+/* =====================
+   WHY BLOCKCHAIN
+===================== */
+.dark-section {
+    background: rgba(124, 124, 255, 0.05);
+    border-radius: 24px;
+    padding: 80px 30px;
+}
+
+.features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.features span {
+    border: 1px solid rgba(124, 124, 255, 0.4);
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+}
+
+/* =====================
+   TRUST SECTION
+===================== */
+.trust-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 40px;
+}
+
+.trust-grid h3 {
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+}
+
+/* =====================
+   RESPONSIVE
+===================== */
+@media (max-width: 768px) {
+    .section {
+        margin-top: 70px;
     }
 
-    button {
-        width: 100%;
+    .section-title {
+        font-size: 1.8rem;
     }
 }

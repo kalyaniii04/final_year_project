@@ -1,0 +1,62 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.verify-container {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #141a2e, #0b0f1a);
+    font-family: "Inter", sans-serif;
+    color: #e5e7eb;
+    padding: 60px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    flex-direction: column;
+    text-align: center;
+}
+
+.status-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(124, 124, 255, 0.2);
+    border-radius: 20px;
+    padding: 40px 30px;
+    max-width: 600px;
+    margin: 0 auto;
+    box-shadow: 0 0 30px rgba(124, 124, 255, 0.1);
+}
+
+.status-box.valid h2 {
+    background: linear-gradient(90deg, #7c7cff, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.status-box.revoked h2 {
+    color: #f87171;
+}
+
+.status-box.failed h2 {
+    color: #f87171;
+}
+
+.info p {
+    margin: 8px 0;
+    font-size: 1rem;
+    color: #d1d5db;
+}
+
+.loading-text {
+    color: #9ca3af;
+    font-size: 1rem;
+    text-align: center;
+    margin-top: 50px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .status-box {
+        padding: 30px 20px;
+    }
+
+    .info p {
+        font-size: 0.95rem;
+    }
+}

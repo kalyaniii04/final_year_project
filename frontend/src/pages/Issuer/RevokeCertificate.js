@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ethers } from "ethers";
-import { Card, CardContent, TextField, Button, Typography } from "@mui/material";
-import { connectWallet } from "../../utils/connectWallet"; // adjust if needed
+import { connectWallet } from "../../utils/connectWallet";
+import "./RevokeCertificate.css";
 
 export default function RevokeCertificate() {
   const [certId, setCertId] = useState("");
@@ -10,13 +10,11 @@ export default function RevokeCertificate() {
   // 🧩 Function to revoke certificate
   const handleRevoke = async () => {
     try {
-      setStatus("⏳ Processing... please confirm the transaction in MetaMask.");
+      setStatus("⏳ Processing... confirm the transaction in MetaMask.");
 
-      // ✅ Connect wallet & contract
       const { contract } = await connectWallet();
 
-      // ✅ Call revoke function
-      const tx = await contract.revokeCertificate(ethers.id(certId)); 
+      const tx = await contract.revokeCertificate(ethers.id(certId));
       await tx.wait();
 
       setStatus("✅ Certificate revoked successfully!");
@@ -31,46 +29,38 @@ export default function RevokeCertificate() {
   };
 
   return (
-    <div style={{ padding: "40px", maxWidth: "600px", margin: "auto" }}>
-      <Typography variant="h4" gutterBottom>
-        🔒 Revoke Certificate
-      </Typography>
+    <div className="revoke-page">
+      <div className="revoke-container">
+        <h1 className="revoke-title">🔒 Revoke Certificate</h1>
+        <p className="revoke-subtitle">
+          Enter the Certificate ID you want to revoke from the blockchain.
+        </p>
 
-      <Card>
-        <CardContent>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Enter the Certificate ID you want to revoke:
-          </Typography>
+        <input
+          className="revoke-input"
+          placeholder="Certificate ID"
+          value={certId}
+          onChange={(e) => setCertId(e.target.value)}
+        />
 
-          <TextField
-            fullWidth
-            label="Certificate ID (text)"
-            value={certId}
-            onChange={(e) => setCertId(e.target.value)}
-            variant="outlined"
-            sx={{ mb: 3 }}
-          />
+        <button
+          className="primary-btn"
+          onClick={handleRevoke}
+          disabled={!certId}
+        >
+          Revoke Certificate
+        </button>
 
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleRevoke}
-            disabled={!certId}
+        {status && (
+          <p
+            className={`status-text ${
+              status.includes("✅") ? "success" : "error"
+            }`}
           >
-            Revoke Certificate
-          </Button>
-
-          {status && (
-            <Typography
-              variant="body1"
-              color={status.includes("✅") ? "green" : "red"}
-              sx={{ mt: 3 }}
-            >
-              {status}
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
+            {status}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

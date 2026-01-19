@@ -1,0 +1,85 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, #0f172a, #020617);
+    font-family: "Inter", sans-serif;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(14px);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+.auth-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.auth-subtitle {
+    margin-top: 8px;
+    margin-bottom: 30px;
+    font-size: 0.95rem;
+    color: #9ca3af;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    background: #020617;
+    color: #ffffff;
+    font-size: 0.95rem;
+}
+
+.auth-input::placeholder {
+    color: #6b7280;
+}
+
+.auth-button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.auth-button:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.auth-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-footer {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #9ca3af;
+}
+
+.auth-footer span {
+    color: #38bdf8;
+    cursor: pointer;
+    font-weight: 500;
+}

@@ -1,196 +1,112 @@
 import React, { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Button,
-  CircularProgress,
-  Divider,
-  Snackbar,
-  Alert,
-} from "@mui/material";
 import { connectWallet } from "../../utils/connectWallet";
-// import { ethers } from "ethers";
+import "./ViewIssuedCertificates.css";
 
-/**
- * ViewIssuedCertificates Component
- * --------------------------------
- * Displays all certificates issued by the connected issuer.
- */
 export default function ViewIssuedCertificates() {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [issuerAddress, setIssuerAddress] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // -------------------- Fetch Certificates --------------------
+  // Fetch certificates from blockchain
   const fetchCertificates = async () => {
-  try {
-    setLoading(true);
-    setErrorMsg("");
+    try {
+      setLoading(true);
+      setErrorMsg("");
 
-    const { contract, signer } = await connectWallet();
-    const address = await signer.getAddress();
-    setIssuerAddress(address);
+      const { contract, signer } = await connectWallet();
+      const address = await signer.getAddress();
+      setIssuerAddress(address);
 
-    // ✅ STEP 1: get IDs ONLY
-    const ids = await contract.getCertificateIdsByIssuer(address);
+      const ids = await contract.getCertificateIdsByIssuer(address);
+      if (!Array.isArray(ids) || ids.length === 0) {
+        setCertificates([]);
+        return;
+      }
 
-    console.log("Fetched certificate IDs:", ids);
+      const certs = await Promise.all(
+        ids.map(async (id) => {
+          const cert = await contract.getCertificate(id);
+          return {
+            id,
+            student: cert.student,
+            revoked: cert.revoked,
+            studentName: cert.studentName,
+            courseName: cert.courseName,
+            instituteName: cert.instituteName,
+            issuedAt: cert.issuedAt
+              ? new Date(Number(cert.issuedAt) * 1000).toLocaleString()
+              : "N/A",
+          };
+        })
+      );
 
-    // Safety guard
-    if (!Array.isArray(ids) || ids.length === 0) {
-      setCertificates([]);
-      return;
+      setCertificates(certs);
+    } catch (error) {
+      console.error("❌ Error fetching certificates:", error);
+      setErrorMsg(error.reason || error.message || "Failed to fetch certificates.");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // ✅ STEP 2: fetch certificates one-by-one
-    const certs = await Promise.all(
-      ids.map(async (id) => {
-        const cert = await contract.getCertificate(id);
-        return {
-          id,
-          student: cert.student,
-          issuer: cert.issuer,
-          issuedAt: cert.issuedAt
-            ? new Date(Number(cert.issuedAt) * 1000).toLocaleString()
-            : "N/A",
-          revoked: cert.revoked,
-          revokedAt: cert.revokedAt
-            ? new Date(Number(cert.revokedAt) * 1000).toLocaleString()
-            : "N/A",
-          instituteName: cert.instituteName,
-          instituteId: cert.instituteId,
-          studentName: cert.studentName,
-          courseName: cert.courseName,
-        };
-      })
-    );
-
-    setCertificates(certs);
-  } catch (error) {
-    console.error("❌ Error fetching certificates:", error);
-    setErrorMsg(
-      error.reason ||
-        error.message ||
-        "Failed to load certificates. Please check the console for details."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-  // -------------------- On Mount --------------------
   useEffect(() => {
     fetchCertificates();
   }, []);
 
-  // -------------------- Render --------------------
   return (
-    <div style={{ padding: "40px", maxWidth: "1000px", margin: "auto" }}>
-      <Typography variant="h4" gutterBottom>
-        🧾 Issued Certificates
-      </Typography>
+    <div className="view-cert-page">
+      <h1 className="page-title">🧾 Issued Certificates</h1>
+      <p className="page-subtitle">
+        Certificates issued by: <strong>{issuerAddress || "Connecting..."}</strong>
+      </p>
 
-      <Card>
-        <CardContent>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Below is a list of all certificates issued by:
-            <br />
-            <strong>{issuerAddress || "Connecting..."}</strong>
-          </Typography>
+      <button className="primary-btn" onClick={fetchCertificates} disabled={loading}>
+        🔄 Refresh List
+      </button>
 
-          <Divider sx={{ my: 2 }} />
+      {loading ? (
+        <p className="loading-text">⏳ Fetching certificates from blockchain...</p>
+      ) : certificates.length === 0 ? (
+        <p className="no-data">No certificates found for this issuer.</p>
+      ) : (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Certificate Hash</th>
+                <th>Student Name</th>
+                <th>Course</th>
+                <th>Institute</th>
+                <th>Student Address</th>
+                <th>Issued At</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {certificates.map((cert, idx) => (
+                <tr key={idx}>
+                  <td>{cert.id ? cert.id.slice(0, 10) + "..." : "N/A"}</td>
+                  <td>{cert.studentName}</td>
+                  <td>{cert.courseName}</td>
+                  <td>{cert.instituteName}</td>
+                  <td>
+                    {cert.student
+                      ? `${cert.student.slice(0, 6)}...${cert.student.slice(-4)}`
+                      : "N/A"}
+                  </td>
+                  <td>{cert.issuedAt}</td>
+                  <td className={cert.revoked ? "revoked" : "active"}>
+                    {cert.revoked ? "❌ Revoked" : "✅ Active"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={fetchCertificates}
-            sx={{ mb: 2 }}
-            disabled={loading}
-          >
-            🔄 Refresh List
-          </Button>
-
-          {loading ? (
-            <div style={{ textAlign: "center", marginTop: "20px" }}>
-              <CircularProgress />
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                Fetching certificates from blockchain...
-              </Typography>
-            </div>
-          ) : certificates.length === 0 ? (
-            <Typography>No certificates found for this issuer.</Typography>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <strong>Certificate Hash</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Student Name</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Course</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Institute</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Student Address</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Issued At</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Status</strong>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {certificates.map((cert, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      {cert.id ? cert.id.slice(0, 10) + "..." : "N/A"}
-                    </TableCell>
-                    <TableCell>{cert.studentName}</TableCell>
-                    <TableCell>{cert.courseName}</TableCell>
-                    <TableCell>{cert.instituteName}</TableCell>
-                    <TableCell>
-                      {cert.student
-                        ? `${cert.student.slice(0, 6)}...${cert.student.slice(-4)}`
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell>{cert.issuedAt}</TableCell>
-                    <TableCell>
-                      {cert.revoked ? "❌ Revoked" : "✅ Active"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Snackbar for errors */}
-      <Snackbar
-        open={!!errorMsg}
-        autoHideDuration={6000}
-        onClose={() => setErrorMsg("")}
-      >
-        <Alert severity="error" onClose={() => setErrorMsg("")}>
-          {errorMsg}
-        </Alert>
-      </Snackbar>
+      {errorMsg && <p className="error-msg">{errorMsg}</p>}
     </div>
   );
 }

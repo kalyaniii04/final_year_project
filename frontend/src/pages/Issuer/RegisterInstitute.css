@@ -1,102 +1,103 @@
-/* --- Professional Full-Page Form Layout --- */
-body {
-    margin: 0;
-    font-family: "Inter", "Poppins", sans-serif;
-    background-color: #f9fafb;
-    color: #1e293b;
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.register-container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at top, #0f172a, #020617);
+    font-family: "Inter", sans-serif;
+    padding: 20px;
+}
+
+.register-card {
+    width: 100%;
+    max-width: 500px;
+    padding: 45px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.45);
+    text-align: center;
+}
+
+.register-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.register-title span {
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.register-subtitle {
+    margin-top: 12px;
+    margin-bottom: 35px;
+    font-size: 0.95rem;
+    color: #9ca3af;
     line-height: 1.6;
 }
 
-/* Container layout */
-.register-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 2rem;
-}
-
-/* Heading */
-.register-container h1 {
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 1rem;
-}
-
-/* Input fields */
-.register-container input {
-    width: 340px;
-    max-width: 90%;
-    padding: 0.9rem 1rem;
-    margin: 0.6rem 0;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    background-color: #ffffff;
-    font-size: 1rem;
-    color: #0f172a;
-    transition: all 0.25s ease;
-}
-
-.register-container input:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-/* Submit button */
-.register-container button {
-    margin-top: 1.5rem;
-    background-color: #2563eb;
+.register-card input {
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.register-card input::placeholder {
+    color: #9ca3af;
+}
+
+.register-card input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+}
+
+.register-card button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    border-radius: 14px;
     border: none;
-    border-radius: 8px;
-    padding: 0.9rem 1.8rem;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600;
+    color: #ffffff;
     cursor: pointer;
-    transition: background-color 0.25s ease, transform 0.15s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    background: linear-gradient(135deg, #2563eb, #0891b2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.register-container button:hover {
-    background-color: #1d4ed8;
+.register-card button:hover {
     transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(59, 130, 246, 0.4);
 }
 
-/* Transaction message */
-.register-container p {
-    margin-top: 1.5rem;
-    font-size: 1rem;
-    color: #334155;
+.tx-hash {
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: #9ca3af;
+    word-break: break-all;
 }
 
-.register-container code {
-    background-color: #e2e8f0;
-    padding: 0.2rem 0.4rem;
-    border-radius: 4px;
-    font-family: monospace;
+.tx-hash code {
+    color: #38bdf8;
 }
 
-/* --- Responsive Design --- */
-@media (max-width: 768px) {
-    .register-container {
-        padding: 2rem 1rem;
+@media (max-width: 500px) {
+    .register-card {
+        padding: 35px 25px;
     }
 
-    .register-container h1 {
-        font-size: 1.8rem;
-    }
-
-    .register-container input {
-        width: 100%;
-    }
-
-    .register-container button {
-        width: 100%;
-        justify-content: center;
+    .register-title {
+        font-size: 1.9rem;
     }
 }
