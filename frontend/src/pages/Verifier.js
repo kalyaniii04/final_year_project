@@ -9,6 +9,7 @@ import {
   Divider,
 } from "@mui/material";
 import { connectWallet } from "../utils/connectWallet";
+import "./Verifier.css";
 
 /**
  * VerifyCertificate Component
@@ -26,9 +27,7 @@ export default function VerifyCertificate() {
   const normalizeHash = (hash) => {
     if (!hash) return "";
     let clean = hash.trim().toLowerCase();
-    if (clean.startsWith("0x")) {
-      clean = clean.slice(2);
-    }
+    if (clean.startsWith("0x")) clean = clean.slice(2);
     return "0x" + clean;
   };
 
@@ -44,20 +43,16 @@ export default function VerifyCertificate() {
 
       const { contract } = await connectWallet();
 
-      // MUST match IssueCertificate hashing logic
       const certIdBytes = ethers.id(certId.trim());
       const fileHashBytes = normalizeHash(fileHash);
 
-      // Fetch certificate data
       const cert = await contract.getCertificate(certIdBytes);
 
-      // Certificate existence check
       if (cert.issuer === ethers.ZeroAddress) {
         setStatus("❌ Certificate does NOT exist on blockchain");
         return;
       }
 
-      // Verify hash + revocation status
       const isValid = await contract.verifyCertificate(
         certIdBytes,
         fileHashBytes
@@ -68,7 +63,6 @@ export default function VerifyCertificate() {
         return;
       }
 
-      // Certificate is valid
       setStatus("✅ Certificate is VALID and not revoked!");
       setCertDetails({
         studentName: cert.studentName,
@@ -93,89 +87,74 @@ export default function VerifyCertificate() {
   };
 
   return (
-    <div style={{ padding: "40px", maxWidth: "700px", margin: "auto" }}>
-      <Typography variant="h4" gutterBottom>
-        🔍 Verify Certificate
-      </Typography>
+    <div className="verify-page">
+      <div className="verify-wrapper">
+        <Typography className="verify-title">
+          🔍 Verify Certificate
+        </Typography>
 
-      <Card>
-        <CardContent>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Enter the Certificate ID and file hash to check authenticity.
-          </Typography>
-
-          <TextField
-            fullWidth
-            label="Certificate ID"
-            value={certId}
-            onChange={(e) => setCertId(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-
-          <TextField
-            fullWidth
-            label="File Hash (SHA-256)"
-            value={fileHash}
-            onChange={(e) => setFileHash(e.target.value)}
-            sx={{ mb: 3 }}
-          />
-
-          <Button
-            variant="contained"
-            onClick={handleVerify}
-            disabled={!certId || !fileHash}
-          >
-            Verify Certificate
-          </Button>
-
-          {status && (
-            <Typography
-              sx={{ mt: 3 }}
-              color={status.includes("✅") ? "green" : "red"}
-            >
-              {status}
+        <Card className="glass-card">
+          <CardContent>
+            <Typography className="verify-subtitle">
+              Enter the Certificate ID and SHA-256 hash to verify authenticity.
             </Typography>
-          )}
 
-          {certDetails && (
-            <>
-              <Divider sx={{ my: 3 }} />
-              <Typography variant="h6">📄 Certificate Details</Typography>
+            <TextField
+              fullWidth
+              label="Certificate ID"
+              value={certId}
+              onChange={(e) => setCertId(e.target.value)}
+              sx={{ mb: 2 }}
+            />
 
-              <Typography>
-                <strong>Student Name:</strong> {certDetails.studentName}
+            <TextField
+              fullWidth
+              label="File Hash (SHA-256)"
+              value={fileHash}
+              onChange={(e) => setFileHash(e.target.value)}
+              sx={{ mb: 3 }}
+            />
+
+            <Button
+              fullWidth
+              variant="contained"
+              className="verify-btn"
+              onClick={handleVerify}
+              disabled={!certId || !fileHash}
+            >
+              Verify Certificate
+            </Button>
+
+            {status && (
+              <Typography
+                className="status-text"
+                sx={{ mt: 3 }}
+                color={status.includes("✅") ? "green" : "red"}
+              >
+                {status}
               </Typography>
-              <Typography>
-                <strong>Course Name:</strong> {certDetails.courseName}
-              </Typography>
-              <Typography>
-                <strong>Institute Name:</strong> {certDetails.instituteName}
-              </Typography>
-              <Typography>
-                <strong>Institute ID:</strong> {certDetails.instituteId}
-              </Typography>
-              <Typography>
-                <strong>Student Address:</strong> {certDetails.student}
-              </Typography>
-              <Typography>
-                <strong>Issuer Address:</strong> {certDetails.issuer}
-              </Typography>
-              <Typography>
-                <strong>Issued At:</strong> {certDetails.issuedAt}
-              </Typography>
-              <Typography>
-                <strong>Revoked:</strong> {certDetails.revoked ? "Yes" : "No"}
-              </Typography>
-              <Typography>
-                <strong>Revoked At:</strong> {certDetails.revokedAt}
-              </Typography>
-              <Typography>
-                <strong>File Hash:</strong> {certDetails.fileHash}
-              </Typography>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            )}
+
+            {certDetails && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Typography variant="h6">📄 Certificate Details</Typography>
+
+                <Typography><strong>Student Name:</strong> {certDetails.studentName}</Typography>
+                <Typography><strong>Course:</strong> {certDetails.courseName}</Typography>
+                <Typography><strong>Institute:</strong> {certDetails.instituteName}</Typography>
+                <Typography><strong>Institute ID:</strong> {certDetails.instituteId}</Typography>
+                <Typography><strong>Student Address:</strong> {certDetails.student}</Typography>
+                <Typography><strong>Issuer Address:</strong> {certDetails.issuer}</Typography>
+                <Typography><strong>Issued At:</strong> {certDetails.issuedAt}</Typography>
+                <Typography><strong>Revoked:</strong> {certDetails.revoked ? "Yes" : "No"}</Typography>
+                <Typography><strong>Revoked At:</strong> {certDetails.revokedAt}</Typography>
+                <Typography><strong>File Hash:</strong> {certDetails.fileHash}</Typography>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
