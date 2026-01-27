@@ -7,6 +7,7 @@ import {
   Button,
   Typography,
   Divider,
+  Box,
 } from "@mui/material";
 import { connectWallet } from "../utils/connectWallet";
 import "./Verifier.css";
@@ -23,7 +24,7 @@ export default function VerifyCertificate() {
   const [status, setStatus] = useState("");
   const [certDetails, setCertDetails] = useState(null);
 
-  // ✅ Normalize SHA-256 hash (prevents 0x0x bug)
+  // Normalize SHA-256 hash
   const normalizeHash = (hash) => {
     if (!hash) return "";
     let clean = hash.trim().toLowerCase();
@@ -129,7 +130,7 @@ export default function VerifyCertificate() {
               <Typography
                 className="status-text"
                 sx={{ mt: 3 }}
-                color={status.includes("✅") ? "green" : "red"}
+                color={status.includes("✅") ? "success.main" : "error.main"}
               >
                 {status}
               </Typography>
@@ -138,18 +139,45 @@ export default function VerifyCertificate() {
             {certDetails && (
               <>
                 <Divider sx={{ my: 3 }} />
-                <Typography variant="h6">📄 Certificate Details</Typography>
 
-                <Typography><strong>Student Name:</strong> {certDetails.studentName}</Typography>
-                <Typography><strong>Course:</strong> {certDetails.courseName}</Typography>
-                <Typography><strong>Institute:</strong> {certDetails.instituteName}</Typography>
-                <Typography><strong>Institute ID:</strong> {certDetails.instituteId}</Typography>
-                <Typography><strong>Student Address:</strong> {certDetails.student}</Typography>
-                <Typography><strong>Issuer Address:</strong> {certDetails.issuer}</Typography>
-                <Typography><strong>Issued At:</strong> {certDetails.issuedAt}</Typography>
-                <Typography><strong>Revoked:</strong> {certDetails.revoked ? "Yes" : "No"}</Typography>
-                <Typography><strong>Revoked At:</strong> {certDetails.revokedAt}</Typography>
-                <Typography><strong>File Hash:</strong> {certDetails.fileHash}</Typography>
+                {/* LEFT-ALIGNED CERTIFICATE DETAILS */}
+                <Box sx={{ textAlign: "left" }}>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    📄 Certificate Details
+                  </Typography>
+
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Student Name:</strong> {certDetails.studentName}
+                  </Typography>
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Course:</strong> {certDetails.courseName}
+                  </Typography>
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Institute:</strong> {certDetails.instituteName}
+                  </Typography>
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Institute ID:</strong> {certDetails.instituteId}
+                  </Typography>
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Student Address:</strong> {certDetails.student}
+                  </Typography>
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Issuer Address:</strong> {certDetails.issuer}
+                  </Typography>
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Issued At:</strong> {certDetails.issuedAt}
+                  </Typography>
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Revoked:</strong>{" "}
+                    {certDetails.revoked ? "Yes" : "No"}
+                  </Typography>
+                  <Typography sx={{ color: "white" }}>
+                    <strong>Revoked At:</strong> {certDetails.revokedAt}
+                  </Typography>
+                  <Typography sx={{ color: "white", wordBreak: "break-all" }}>
+                    <strong>File Hash:</strong> {certDetails.fileHash}
+                  </Typography>
+                </Box>
               </>
             )}
           </CardContent>

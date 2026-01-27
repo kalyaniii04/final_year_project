@@ -1,4 +1,4 @@
 import ABIfile from "./CertificateRegistry.json";
 
 export const CONTRACT_ABI = ABIfile.abi;
-export const CONTRACT_ADDRESS = "0x831f4a70ca4eeB41b85562e3fD69abe5d96328f0";
+export const CONTRACT_ADDRESS = "0x915A2285C9128dD12D3ee2683d54400Fe264df78";
