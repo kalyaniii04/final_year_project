@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import CertificateRegistry from "../CertificateRegistry.json";
 import "./Student.css";
 
-const CONTRACT_ADDRESS = "0x80f710144Bb189954304A1316eA63B00b9A7D65e";
+const CONTRACT_ADDRESS = "0xD4727a772256e8705BDfD59EfD2Ad9371C5dccF7";
 const IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
 
 export default function Student() {
